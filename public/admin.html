@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#faf6ef">
+    <title>Operasional · Gourmet's Coffee Co.</title>
+    <link rel="stylesheet" href="/admin.css">
+    <script src="/admin.js" defer></script>
+  </head>
+  <body>
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <a class="admin-brand" href="/admin" aria-label="Gourmet's Coffee Co. Admin">
+          <img src="/pos-assets/gourmets-logo.png" alt="">
+          <span><strong>GOURMET'S</strong><small>COFFEE CO. · CAFÉ & MART</small></span>
+        </a>
+        <section class="outlet-card"><small>OUTLET AKTIF</small><strong id="outlet-name">Memuat outlet…</strong><span id="location-count">Lokasi stok</span></section>
+        <nav class="admin-nav" aria-label="Navigasi operasional">
+          <small>RUANG OPERASIONAL</small>
+          <a href="/admin" data-page="dashboard"><span>▦</span>Ringkasan</a>
+          <a href="/admin/inventory" data-page="inventory"><span>♧</span>Inventori</a>
+          <a href="/admin/cashiers" data-page="cashiers"><span>♙</span>Akun kasir</a>
+          <a href="/admin/sales" data-page="sales"><span>▤</span>Penjualan</a>
+          <a href="/admin/shifts" data-page="shifts"><span>◷</span>Rekap shift</a>
+          <div class="nav-divider"></div><small>DATA MASTER</small>
+          <a href="/admin/menus" data-page="menus"><span>☕</span>Produk & BOM</a>
+          <a href="/admin/ledger" data-page="ledger"><span>⇄</span>Ledger stok</a>
+          <div class="nav-divider"></div><small>PENGADAAN</small>
+          <a class="nav-disabled" aria-disabled="true" title="Frontend pengadaan belum tersedia"><span>♧</span>Supplier <em>Segera</em></a>
+          <a class="nav-disabled" aria-disabled="true" title="Frontend pengadaan belum tersedia"><span>▤</span>Pengadaan <em>Segera</em></a>
+          <a class="nav-disabled" aria-disabled="true" title="Frontend pengadaan belum tersedia"><span>▣</span>Penerimaan <em>Segera</em></a>
+          <a class="nav-disabled" aria-disabled="true" title="Fitur stok opname belum tersedia"><span>✓</span>Stok opname <em>Segera</em></a>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="user-badge"><span id="user-avatar">A</span><span><strong id="user-name">Admin</strong><small>Administrator</small></span></div>
+          <button id="logout-button" type="button">↪ Keluar</button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <header class="topbar"><div class="breadcrumb"><span>Gourmet's Coffee Co.</span><b>/</b><strong id="page-crumb">Ringkasan</strong></div><div class="topbar-right"><span class="role-pill">Administrator</span><span id="today-label"></span></div></header>
+        <div class="page-wrap">
+          <div class="error-banner hidden" id="error-banner" role="alert"></div>
+          <section id="dashboard-page" class="page-view">
+            <header class="page-heading"><div><p class="eyebrow">RUANG OPERASIONAL</p><h1 id="welcome-title">Ringkasan operasional</h1><p class="muted" id="dashboard-subtitle">Memuat data outlet…</p></div><span class="date-chip" id="today-chip"></span></header>
+            <div class="metric-grid" id="metric-grid"><article class="metric-card skeleton"></article><article class="metric-card skeleton"></article><article class="metric-card skeleton"></article><article class="metric-card skeleton"></article></div>
+            <section class="panel low-stock-panel"><header class="panel-heading"><div><h2>Perhatian stok</h2><p>Bahan di bawah batas minimum dari saldo ledger.</p></div><a href="/admin/inventory" class="text-link">Buka inventori →</a></header>
+              <div class="table-scroll"><table><thead><tr><th>Bahan / SKU</th><th>Saldo</th><th>Batas minimum</th><th>Status</th></tr></thead><tbody id="low-stock-body"><tr><td colspan="4" class="table-empty">Memuat…</td></tr></tbody></table></div>
+            </section>
+            <p class="data-note">Ringkasan memakai data transaksi dan pergerakan stok yang tercatat di database. Modul ini belum membuat atau mengubah data master.</p>
+          </section>
+
+          <section id="inventory-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">MASTER ITEM & SALDO LEDGER</p><h1>Inventori bahan</h1><p class="muted">Saldo dihitung dari ledger pada seluruh lokasi stok outlet.</p></div><span class="date-chip" id="inventory-count">Memuat item…</span></header>
+            <div class="notice"><span>✓</span><div><strong>Saldo tidak diedit langsung</strong><p>Barang masuk, konsumsi POS, dan koreksi harus dicatat sebagai pergerakan stok agar riwayat tetap terlacak.</p></div></div>
+            <section class="panel inventory-panel">
+              <div class="inventory-toolbar inventory-toolbar-filtered">
+                <label class="search-box"><span>⌕</span><input id="inventory-search" type="search" placeholder="Cari nama, SKU, atau kategori…" autocomplete="off"></label>
+                <div class="inventory-filters">
+                  <label><span>Kategori</span><select id="inventory-category-filter"><option value="all">Semua kategori</option></select></label>
+                  <label><span>Lokasi</span><select id="inventory-location-filter"><option value="all">Semua lokasi</option></select></label>
+                  <label><span>Status stok</span><select id="inventory-status-filter"><option value="all">Semua status</option><option value="low">Di bawah minimum</option><option value="empty">Stok kosong</option><option value="okay">Aman</option><option value="inactive">Nonaktif</option></select></label>
+                  <label><span>Kedaluwarsa</span><select id="inventory-expiry-filter"><option value="all">Semua stok</option><option value="expired">Sudah kedaluwarsa</option><option value="soon">Kedaluwarsa ≤ 30 hari</option><option value="dated">Punya tanggal expiry</option></select></label>
+                  <label><span>Urutkan</span><select id="inventory-sort"><option value="name">Nama A–Z</option><option value="expiry">Expired terdekat</option><option value="low">Saldo terendah</option><option value="high">Saldo tertinggi</option></select></label>
+                </div>
+                <span id="location-summary" class="muted"></span>
+              </div>
+              <div class="table-scroll"><table><thead><tr><th>Item / SKU</th><th>Kategori</th><th>UOM dasar</th><th>Saldo fisik</th><th>Minimum</th><th>Lokasi stok</th><th>Expired terdekat</th><th>Status</th></tr></thead><tbody id="inventory-body"><tr><td colspan="8" class="table-empty">Memuat inventori…</td></tr></tbody></table></div>
+              <footer class="panel-footer"><span id="inventory-footnote"></span><span>Maksimal 300 item</span></footer>
+            </section>
+          </section>
+
+          <section id="ledger-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">RIWAYAT PERGERAKAN STOK</p><h1>Ledger stok</h1><p class="muted">Catatan append-only untuk barang masuk, pemakaian POS, waste, dan koreksi stok.</p></div><span class="date-chip" id="ledger-count">Memuat…</span></header>
+            <section class="panel report-filter"><form id="ledger-filter" class="filter-form ledger-filter">
+              <label>Dari<input name="from" type="date"></label><label>Sampai<input name="to" type="date"></label>
+              <label>Item / SKU / lot<input name="q" type="search" maxlength="120" placeholder="Cari item, SKU, lot…"></label>
+              <label>Lokasi<select name="stock_location_id"><option value="">Semua lokasi</option></select></label>
+              <label>Tipe pergerakan<select name="movement_type"><option value="">Semua tipe</option><option value="opening_balance">Saldo awal</option><option value="goods_receipt">Barang masuk</option><option value="sale_consumption">Konsumsi POS</option><option value="waste">Waste</option><option value="adjustment_in">Koreksi masuk</option><option value="adjustment_out">Koreksi keluar</option><option value="transfer_in">Transfer masuk</option><option value="transfer_out">Transfer keluar</option><option value="return_to_stock">Retur ke stok</option><option value="stocktake_in">Opname masuk</option><option value="stocktake_out">Opname keluar</option></select></label>
+              <button class="primary-button" type="submit">Terapkan filter</button>
+            </form></section>
+            <section class="panel"><div class="table-scroll"><table class="ledger-table"><thead><tr><th>Waktu</th><th>Item / SKU</th><th>Pergerakan</th><th>Jumlah</th><th>Lokasi & lot</th><th>Sumber / alasan</th><th>Dicatat oleh</th></tr></thead><tbody id="ledger-body"><tr><td colspan="7" class="table-empty">Memuat ledger…</td></tr></tbody></table></div>
+              <footer class="panel-footer"><span id="ledger-footnote">Pergerakan terbaru ditampilkan terlebih dahulu.</span><button id="ledger-more" class="small-button hidden" type="button">Muat pergerakan berikutnya</button></footer>
+            </section>
+          </section>
+
+          <section id="menus-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">KATALOG KAFE & CONVENIENCE STORE</p><h1>Produk & BOM</h1><p class="muted">Kelola menu kafe dengan resep dan barang retail yang terhubung langsung ke SKU inventori.</p></div><div class="page-heading-actions"><span class="date-chip" id="menu-count">Memuat produk…</span><button id="menu-add-button" class="primary-button hidden" type="button">＋ Tambah produk</button></div></header>
+            <div class="menu-management-layout">
+              <section class="panel menu-list-panel"><div class="inventory-toolbar"><label class="search-box"><span>⌕</span><input id="menu-search" type="search" placeholder="Cari menu atau kategori…" autocomplete="off"></label></div><div id="admin-menu-list" class="admin-menu-list"><p class="table-empty">Memuat menu…</p></div></section>
+              <section class="panel menu-detail-panel" id="menu-detail"><div class="empty-state"><strong>Pilih menu</strong><p>Pilih item di daftar untuk melihat varian dan resepnya.</p></div></section>
+            </div>
+          </section>
+
+          <section id="cashiers-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">AKSES KASIR</p><h1>Akun kasir</h1><p class="muted">Admin dapat membuat dan menonaktifkan akun kasir, serta mengatur ulang password.</p></div><span class="date-chip" id="cashier-count">Memuat…</span></header>
+            <div class="cashier-layout">
+              <section class="panel create-cashier-panel"><header class="panel-heading"><div><h2>Tambah akun kasir</h2><p>Akun baru langsung mendapat role Kasir untuk outlet aktif.</p></div></header>
+                <form id="cashier-create-form" class="cashier-form"><label>Nama lengkap<input name="full_name" maxlength="160" required></label><label>Username<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9._-]+" autocomplete="off" required><small>3–32 karakter: huruf, angka, titik, garis bawah, atau strip.</small></label><label>Password awal<input name="password" type="password" minlength="6" maxlength="200" autocomplete="new-password" required><small>Minimal 6 karakter. Berikan password secara langsung ke kasir.</small></label><p id="cashier-form-error" class="login-error hidden" role="alert"></p><button class="primary-button" type="submit"><span>Buat akun kasir</span><span>＋</span></button></form>
+              </section>
+              <section class="panel cashier-list-panel"><header class="panel-heading"><div><h2>Daftar kasir</h2><p>Status akses, shift aktif, dan jumlah transaksi lunas.</p></div></header><div class="table-scroll"><table><thead><tr><th>Kasir</th><th>Status akun</th><th>Login terakhir</th><th>Transaksi</th><th>Shift</th><th>Aksi</th></tr></thead><tbody id="cashier-body"><tr><td colspan="6" class="table-empty">Memuat akun…</td></tr></tbody></table></div></section>
+            </div>
+          </section>
+
+          <section id="sales-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">LAPORAN KASIR</p><h1>Penjualan</h1><p class="muted">Transaksi dengan pembayaran sukses pada rentang tanggal terpilih.</p></div></header>
+            <section class="panel report-filter"><form id="sales-filter" class="filter-form"><label>Dari<input name="from" type="date" required></label><label>Sampai<input name="to" type="date" required></label><label>Kasir<select name="cashier_id"><option value="">Semua kasir</option></select></label><button class="primary-button" type="submit">Terapkan filter</button></form></section>
+            <div class="metric-grid report-metrics" id="sales-metrics"></div>
+            <section class="panel"><header class="panel-heading"><div><h2>Rincian transaksi</h2><p id="sales-range-label"></p></div><span id="sales-row-count" class="date-chip"></span></header><div class="table-scroll"><table><thead><tr><th>Waktu</th><th>Transaksi / Order</th><th>Kasir</th><th>Metode</th><th>Tipe order</th><th>Jumlah</th></tr></thead><tbody id="sales-body"><tr><td colspan="6" class="table-empty">Pilih rentang tanggal.</td></tr></tbody></table></div></section>
+          </section>
+
+          <section id="shifts-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">REKONSILIASI KAS</p><h1>Rekap shift</h1><p class="muted">Lihat kas awal, perkiraan, hasil hitung, dan selisih per shift.</p></div></header>
+            <section class="panel report-filter"><form id="shift-filter" class="filter-form"><label>Dari<input name="from" type="date" required></label><label>Sampai<input name="to" type="date" required></label><label>Kasir<select name="cashier_id"><option value="">Semua kasir</option></select></label><button class="primary-button" type="submit">Terapkan filter</button></form></section>
+            <div class="metric-grid report-metrics" id="shift-metrics"></div>
+            <section class="panel"><header class="panel-heading"><div><h2>Daftar shift</h2><p id="shift-range-label"></p></div><span id="shift-row-count" class="date-chip"></span></header><div class="table-scroll"><table><thead><tr><th>Kasir</th><th>Status</th><th>Dibuka</th><th>Ditutup</th><th>Kas awal</th><th>Perkiraan</th><th>Kas akhir</th><th>Selisih</th></tr></thead><tbody id="shift-body"><tr><td colspan="8" class="table-empty">Pilih rentang tanggal.</td></tr></tbody></table></div></section>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <section id="login-screen" class="login-screen hidden" aria-label="Masuk ke panel operasional">
+      <a class="login-brand" href="/admin"><img src="/pos-assets/gourmets-logo.png" alt=""><span><strong>GOURMET'S COFFEE CO.</strong><small>PANEL OPERASIONAL</small></span></a>
+      <form id="login-form" class="login-card"><p class="eyebrow">AKSES TERBATAS</p><h1>Masuk ke operasional</h1><p class="muted">Gunakan akun dengan izin admin untuk melihat data outlet.</p><label>Username<input name="username" autocomplete="username" required></label><label>Password<input name="password" type="password" autocomplete="current-password" required></label><p id="login-error" class="login-error hidden" role="alert"></p><button class="primary-button" type="submit">Masuk <span>→</span></button><a href="/" class="login-back">Kembali ke halaman awal</a></form>
+    </section>
+    <div id="password-dialog" class="modal-backdrop hidden" role="presentation"><form id="password-form" class="password-dialog" role="dialog" aria-modal="true" aria-labelledby="password-title"><button type="button" id="password-close" class="dialog-close" aria-label="Tutup">×</button><p class="eyebrow">KEAMANAN AKUN</p><h2 id="password-title">Atur ulang password</h2><p class="muted" id="password-user-label"></p><label>Password baru<input name="password" type="password" minlength="6" maxlength="200" autocomplete="new-password" required></label><p class="login-error hidden" id="password-error" role="alert"></p><button class="primary-button" type="submit">Simpan password</button></form></div>
+    <div id="recipe-dialog" class="modal-backdrop hidden" role="presentation"><form id="recipe-form" class="password-dialog recipe-dialog" role="dialog" aria-modal="true" aria-labelledby="recipe-title"><button type="button" id="recipe-close" class="dialog-close" aria-label="Tutup">×</button><p class="eyebrow">VERSI RESEP BARU</p><h2 id="recipe-title">Edit komposisi resep</h2><p class="muted">Kuantitas menggunakan satuan dasar inventori. Versi yang sedang dipakai transaksi akan tetap tersimpan.</p><div id="recipe-lines" class="recipe-lines"></div><button type="button" id="recipe-add-line" class="small-button">＋ Tambah bahan</button><p id="recipe-error" class="login-error hidden" role="alert"></p><button class="primary-button" type="submit">Simpan versi resep</button></form></div>
+    <div id="menu-create-dialog" class="modal-backdrop hidden" role="presentation"><form id="menu-create-form" class="password-dialog recipe-dialog" role="dialog" aria-modal="true" aria-labelledby="menu-create-title"><button type="button" id="menu-create-close" class="dialog-close" aria-label="Tutup">×</button><p class="eyebrow">KATALOG POS</p><h2 id="menu-create-title">Tambah produk</h2><div class="menu-create-fields"><label>Jenis produk<select name="product_type"><option value="prepared">Kafe · diracik dengan BOM</option><option value="retail">Retail · barang dengan SKU</option></select></label><label>Kode produk<input name="code" minlength="3" maxlength="60" pattern="[A-Za-z0-9._-]+" required placeholder="SKU atau MENU-001"></label><label>Nama produk<input name="name" minlength="2" maxlength="160" required></label><label>Kategori<select name="category_id" required><option value="">Pilih kategori</option></select></label><label>Harga uji (Rp)<input name="price_amount" type="number" min="1" step="1000" required placeholder="25000"></label></div><div id="retail-product-fields" class="menu-create-fields hidden"><label>SKU inventori<select name="retail_inventory_item_id"><option value="">Pilih SKU inventori</option></select></label><label>Qty stok per unit jual<input name="retail_quantity_base" type="number" min="0.000001" step="0.000001" value="1"><small>Dalam satuan dasar item; contoh 1 pcs.</small></label></div><div id="prepared-product-fields"><p class="muted">Tambahkan bahan dan kuantitas dalam satuan dasar inventori.</p><div id="new-menu-lines" class="recipe-lines"></div><button type="button" id="menu-create-add-line" class="small-button">＋ Tambah bahan</button></div><p id="menu-create-error" class="login-error hidden" role="alert"></p><button class="primary-button" type="submit">Simpan produk</button></form></div>
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+  </body>
+</html>

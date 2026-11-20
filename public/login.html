@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#faf6ef">
+    <title>Masuk · Gourmet's Coffee Co.</title>
+    <link rel="stylesheet" href="/login.css">
+    <script src="/login.js" defer></script>
+  </head>
+  <body>
+    <main class="login-page">
+      <a class="brand" href="/" aria-label="Gourmet's Coffee Co.">
+        <img src="/pos-assets/gourmets-logo.png" alt="">
+        <span><strong>GOURMET'S COFFEE CO.</strong><small>CAFÉ & MART</small></span>
+      </a>
+      <section class="login-card" aria-labelledby="login-title">
+        <p class="eyebrow">SISTEM OPERASIONAL</p>
+        <h1 id="login-title">Selamat datang</h1>
+        <p class="intro">Masuk dengan akunmu. Kami akan membuka halaman sesuai peran akun.</p>
+        <form id="login-form">
+          <label>Username<input name="username" type="text" autocomplete="username" autocapitalize="none" required autofocus></label>
+          <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+          <p id="login-error" class="error hidden" role="alert"></p>
+          <button type="submit"><span>Masuk</span><span aria-hidden="true">→</span></button>
+        </form>
+        <p class="role-note"><span>Admin</span> Dashboard & operasional <i></i> <span>Kasir</span> POS & stok</p>
+      </section>
+      <footer>GOURMET'S COFFEE CO. <span>·</span> GCIMS</footer>
+    </main>
+  </body>
+</html>

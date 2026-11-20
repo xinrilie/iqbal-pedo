@@ -1,0 +1,670 @@
+openapi: 3.1.0
+info:
+  title: GCIMS API
+  version: 1.0.0
+  description: >-
+    Kontrak API baseline untuk katalog POS, draft order, pembayaran,
+    callback payment provider, receipt, dan kitchen display system.
+    Belum merupakan implementasi backend.
+servers:
+  - url: https://{apiHost}/api/v1
+    description: Host backend GCIMS (placeholder deployment)
+    variables:
+      apiHost:
+        default: api.example.invalid
+security:
+  - BearerAuth: []
+tags:
+  - name: POS
+  - name: Orders
+  - name: Payments
+  - name: Webhooks
+  - name: KDS
+paths:
+  /outlets/{outletId}/catalog:
+    get:
+      tags: [POS]
+      operationId: getOutletCatalog
+      summary: Ambil katalog menu dan varian POS
+      description: includeUnavailable=true memerlukan permission tambahan admin.menu.read. Varian tanpa active BOM ditandai is_sellable=false.
+      x-required-permission: pos.catalog.read
+      parameters:
+        - $ref: '#/components/parameters/OutletId'
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: includeUnavailable
+          in: query
+          schema: { type: boolean, default: false }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Katalog outlet
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, page]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/CatalogMenu' }
+                  page: { $ref: '#/components/schemas/PageInfo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /outlets/{outletId}/orders:
+    post:
+      tags: [Orders]
+      operationId: createDraftOrder
+      summary: Buat draft order dari POS
+      x-required-permission: pos.order.create
+      parameters:
+        - $ref: '#/components/parameters/OutletId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOrderRequest' }
+      responses:
+        '201':
+          description: Draft order dibuat atau resource idempoten yang sama dikembalikan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /orders/{orderId}:
+    get:
+      tags: [Orders]
+      operationId: getOrder
+      summary: Baca detail order
+      x-required-permission: pos.order.read
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Detail order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /orders/{orderId}/items:
+    put:
+      tags: [Orders]
+      operationId: replaceDraftOrderItems
+      summary: Ganti seluruh isi keranjang pada order draft
+      description: Operasi replace-all; hanya draft. Harga/pajak/BOM dihitung ulang server.
+      x-required-permission: pos.order.update
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplaceOrderItemsRequest' }
+      responses:
+        '200':
+          description: Keranjang draft diperbarui
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /orders/{orderId}/payments:
+    post:
+      tags: [Payments]
+      operationId: createOrderPayment
+      summary: Mulai pembayaran untuk order
+      x-required-permission: pos.payment.create
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePaymentRequest' }
+      responses:
+        '201':
+          description: Pembayaran tunai test-only tercatat dan stok dikonsumsi atomik dari snapshot BOM. Gateway asynchronous belum tersedia.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' } # includes INSUFFICIENT_STOCK and stock reservation conflicts
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /payments/{paymentId}:
+    get:
+      tags: [Payments]
+      operationId: getPayment
+      summary: Baca status payment
+      x-required-permission: pos.payment.read
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: Status pembayaran
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /payments/{paymentId}/cancel:
+    post:
+      tags: [Payments]
+      operationId: cancelPendingPayment
+      summary: Batalkan payment pending jika provider mendukung
+      x-required-permission: pos.payment.cancel
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Payment dibatalkan atau tetap pending selama konfirmasi provider
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /orders/{orderId}/receipt:
+    get:
+      tags: [Orders]
+      operationId: getOrderReceipt
+      summary: Ambil data receipt order
+      description: Hanya tersedia untuk order confirmed/completed yang telah lunas melalui payment succeeded.
+      x-required-permission: pos.receipt.read
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Data receipt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Receipt' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /webhooks/payments/{providerCode}:
+    post:
+      tags: [Webhooks]
+      operationId: receivePaymentWebhook
+      summary: Terima callback provider pembayaran
+      description: >-
+        Endpoint tanpa bearer user. Adapter wajib memverifikasi signature dan
+        timestamp sesuai dokumentasi provider. Payload disimpan tersanitasi,
+        dideduplikasi berdasarkan providerCode + provider_event_id, lalu diproses idempoten.
+      security: []
+      parameters:
+        - name: providerCode
+          in: path
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 60 }
+        - name: X-Provider-Signature
+          in: header
+          required: true
+          schema: { type: string, minLength: 8 }
+        - name: X-Provider-Timestamp
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProviderWebhookRawPayload' }
+      responses:
+        '200':
+          description: Event valid diproses atau telah pernah diproses (duplicate acknowledgement)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookAck' }
+        '202':
+          description: Event valid disimpan untuk rekonsiliasi karena payment belum dapat dicocokkan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookAck' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { description: Signature/timestamp tidak valid }
+        '429': { description: Rate limit }
+  /kds/tickets:
+    get:
+      tags: [KDS]
+      operationId: listKitchenTickets
+      summary: Daftar antrean produksi
+      x-required-permission: kds.ticket.read
+      parameters:
+        - name: outletId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/KitchenTicketStatus' }
+          style: form
+          explode: false
+        - name: stationCode
+          in: query
+          schema: { type: string, maxLength: 40 }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Antrean KDS
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, page]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/KitchenTicket' }
+                  page: { $ref: '#/components/schemas/PageInfo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /kds/tickets/{ticketId}:
+    get:
+      tags: [KDS]
+      operationId: getKitchenTicket
+      summary: Detail tiket produksi
+      x-required-permission: kds.ticket.read
+      parameters:
+        - $ref: '#/components/parameters/TicketId'
+      responses:
+        '200':
+          description: Detail tiket
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KitchenTicket' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /kds/tickets/{ticketId}/status:
+    patch:
+      tags: [KDS]
+      operationId: updateKitchenTicketStatus
+      summary: Perbarui status tiket
+      x-required-permission: kds.ticket.update
+      parameters:
+        - $ref: '#/components/parameters/TicketId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTicketStatusRequest' }
+      responses:
+        '200':
+          description: Status tiket diperbarui
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KitchenTicket' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /kds/tickets/{ticketId}/items/{ticketItemId}/status:
+    patch:
+      tags: [KDS]
+      operationId: updateKitchenTicketItemStatus
+      summary: Perbarui status item produksi
+      x-required-permission: kds.ticket.update
+      parameters:
+        - $ref: '#/components/parameters/TicketId'
+        - name: ticketItemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTicketStatusRequest' }
+      responses:
+        '200':
+          description: Status item diperbarui
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KitchenTicketItem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OutletId:
+      name: outletId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TicketId:
+      name: ticketId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 120 }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Draft order version previously returned as version_no.
+      schema: { type: string, pattern: '^\d+$', example: '3' }
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema: { type: string, maxLength: 120 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string, maxLength: 500 }
+  responses:
+    BadRequest:
+      description: Request tidak valid
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Autentikasi gagal
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Permission atau scope tidak cukup
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource tidak ditemukan dalam scope pengguna
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Konflik status atau idempotensi
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unprocessable:
+      description: Aturan bisnis tidak terpenuhi
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unavailable:
+      description: Layanan provider/downstream belum tersedia
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id, details]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  reason: { type: string }
+    PageInfo:
+      type: object
+      required: [limit]
+      properties:
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        next_cursor: { type: [string, 'null'] }
+    OrderStatus:
+      type: string
+      enum: [draft, pending_payment, confirmed, completed, cancelled, partially_cancelled, partially_refunded, refunded]
+    PaymentStatus:
+      type: string
+      enum: [pending, succeeded, failed, expired, cancelled, partially_refunded, refunded, reconciliation_required]
+    KitchenTicketStatus:
+      type: string
+      enum: [queued, in_preparation, ready, served, cancelled]
+    KitchenItemStatus:
+      type: string
+      enum: [queued, in_preparation, ready, served, cancelled]
+    CatalogMenu:
+      type: object
+      required: [menu_id, menu_name, variants]
+      properties:
+        menu_id: { type: string, format: uuid }
+        menu_name: { type: string }
+        description: { type: [string, 'null'] }
+        image_url: { type: [string, 'null'], format: uri }
+        category:
+          type: [object, 'null']
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        variants:
+          type: array
+          items: { $ref: '#/components/schemas/CatalogVariant' }
+    CatalogVariant:
+      type: object
+      required: [menu_variant_id, code, name, price_amount, currency, is_available, is_sellable]
+      properties:
+        menu_variant_id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        price_amount: { type: integer, minimum: 0, description: Rupiah integer }
+        currency: { type: string, const: IDR }
+        is_available: { type: boolean, description: Status aktif menu/outlet, bukan jaminan stok bahan }
+        is_sellable: { type: boolean, description: false bila menu tidak tersedia atau belum memiliki active BOM }
+        sellability_reason: { type: [string, 'null'], enum: [not_available, recipe_required, active_recipe_required, null] }
+        active_recipe_version_id: { type: [string, 'null'], format: uuid }
+    OrderLineInput:
+      type: object
+      required: [menu_variant_id, quantity]
+      properties:
+        menu_variant_id: { type: string, format: uuid }
+        quantity: { type: string, maxLength: 13, pattern: '^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,3})?$', examples: ['2', '150.000'], description: POS quantity supports up to 3 decimals and NUMERIC(12,3) max 999999999.999 }
+        item_note: { type: [string, 'null'], maxLength: 500 }
+    CreateOrderRequest:
+      type: object
+      required: [order_type, stock_location_id, lines]
+      properties:
+        order_type: { type: string, enum: [dine_in, takeaway] }
+        stock_location_id: { type: string, format: uuid }
+        table_label: { type: [string, 'null'], maxLength: 40 }
+        queue_name: { type: [string, 'null'], maxLength: 100 }
+        customer_note: { type: [string, 'null'], maxLength: 1000 }
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { $ref: '#/components/schemas/OrderLineInput' }
+    ReplaceOrderItemsRequest:
+      type: object
+      required: [lines]
+      properties:
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { $ref: '#/components/schemas/OrderLineInput' }
+        customer_note: { type: [string, 'null'], maxLength: 1000 }
+    OrderLine:
+      type: object
+      required: [id, menu_name, variant_name, quantity, unit_price_amount, gross_amount, discount_amount, tax_amount, total_amount]
+      properties:
+        id: { type: string, format: uuid }
+        menu_name: { type: string }
+        variant_name: { type: string }
+        quantity: { type: string }
+        unit_price_amount: { type: integer }
+        gross_amount: { type: integer }
+        discount_amount: { type: integer }
+        tax_amount: { type: integer }
+        total_amount: { type: integer }
+        item_note: { type: [string, 'null'] }
+    Order:
+      type: object
+      required: [id, order_number, status, order_type, currency, gross_subtotal_amount, discount_amount, tax_amount, grand_total_amount, version_no, lines]
+      properties:
+        id: { type: string, format: uuid }
+        order_number: { type: string }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        order_type: { type: string, enum: [dine_in, takeaway] }
+        currency: { type: string, const: IDR }
+        gross_subtotal_amount: { type: integer }
+        discount_amount: { type: integer }
+        tax_amount: { type: integer }
+        grand_total_amount: { type: integer }
+        version_no: { type: integer, minimum: 1 }
+        customer_note: { type: [string, 'null'] }
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/OrderLine' }
+        payment_status: { type: [string, 'null'], enum: [pending, succeeded, failed, expired, cancelled, partially_refunded, refunded, reconciliation_required, null] }
+        production_status: { type: [string, 'null'], enum: [queued, in_preparation, ready, served, cancelled, null] }
+        created_at: { type: string, format: date-time }
+    CreatePaymentRequest:
+      type: object
+      required: [method, amount]
+      properties:
+        method: { type: string, enum: [cash, qris, card, bank_transfer, other] }
+        amount: { type: integer, minimum: 1 }
+        cash_received_amount: { type: integer, minimum: 0 }
+        provider_code: { type: [string, 'null'], maxLength: 60 }
+    Payment:
+      type: object
+      required: [id, payment_number, method, status, amount, currency]
+      properties:
+        id: { type: string, format: uuid }
+        payment_number: { type: string }
+        method: { type: string, enum: [cash, qris, card, bank_transfer, other] }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        amount: { type: integer, minimum: 1 }
+        currency: { type: string, const: IDR }
+        provider_reference: { type: [string, 'null'] }
+        cash_received_amount: { type: [integer, 'null'] }
+        cash_change_amount: { type: [integer, 'null'] }
+        confirmed_at: { type: [string, 'null'], format: date-time }
+        checkout:
+          type: [object, 'null']
+          properties:
+            type: { type: string, enum: [qr_code, redirect, instruction] }
+            qr_string: { type: [string, 'null'] }
+            checkout_url: { type: [string, 'null'], format: uri }
+            expires_at: { type: [string, 'null'], format: date-time }
+    ProviderWebhookRawPayload:
+      type: object
+      description: Provider-specific JSON body. Normalize only after signature verification in the adapter.
+      additionalProperties: true
+    WebhookAck:
+      type: object
+      required: [accepted, duplicate]
+      properties:
+        accepted: { type: boolean }
+        duplicate: { type: boolean }
+        reconciliation_required: { type: boolean, default: false }
+    Receipt:
+      type: object
+      required: [order, payments, issued_at]
+      properties:
+        order: { $ref: '#/components/schemas/Order' }
+        payments:
+          type: array
+          items: { $ref: '#/components/schemas/Payment' }
+        issued_at: { type: string, format: date-time }
+        receipt_reference: { type: string }
+    KitchenTicketItem:
+      type: object
+      required: [id, menu_name, variant_name, quantity, status]
+      properties:
+        id: { type: string, format: uuid }
+        menu_name: { type: string }
+        variant_name: { type: string }
+        quantity: { type: string }
+        status: { $ref: '#/components/schemas/KitchenItemStatus' }
+        item_note: { type: [string, 'null'] }
+    KitchenTicket:
+      type: object
+      required: [id, ticket_number, order_number, status, queued_at, items]
+      properties:
+        id: { type: string, format: uuid }
+        ticket_number: { type: string }
+        order_number: { type: string }
+        status: { $ref: '#/components/schemas/KitchenTicketStatus' }
+        priority: { type: integer, minimum: 0 }
+        queued_at: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/KitchenTicketItem' }
+    UpdateTicketStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/KitchenTicketStatus' }
+        reason: { type: [string, 'null'], maxLength: 500 }

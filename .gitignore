@@ -1,0 +1,56 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+.npmrc
+secrets/
+credentials/
+*service-account*.json
+*.xlsx
+*.xls
+
+# Dependencies and generated output
+node_modules/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+dist/
+build/
+out/
+.cache/
+.npm/
+*.tsbuildinfo
+
+# Local logs and temporary files
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+
+# Local IDE and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Private database exports and snapshots (keep migration/seed SQL under db/)
+backups/
+*.dump
+*.dump.*
+*.pgdump
+*.backup
+*.bak
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.db
+
+# Local operational handoff notes contain database and transaction identifiers
+*HANDOFF*.md
+/scripts/README_draft_update_test.md
+/scripts/test-draft-update-idempotency.ps1

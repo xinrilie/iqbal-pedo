@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#faf6ef">
+    <title>Stok barang · Gourmet's Coffee Co.</title>
+    <link rel="stylesheet" href="/pos.css">
+    <link rel="stylesheet" href="/cashier-stock.css">
+    <script src="/cashier-stock.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="/pos" aria-label="Gourmet's Coffee Co. POS"><span class="brand-mark"><img src="/pos-assets/gourmets-logo.png" alt=""></span><span class="brand-copy"><strong>GOURMET'S</strong><small>COFFEE CO. · CAFÉ & MART</small></span></a>
+        <div class="outlet-card"><span class="outlet-label">OUTLET AKTIF</span><strong id="outlet-name">Memuat outlet…</strong><span id="outlet-location">Lokasi stok</span></div>
+        <nav class="side-nav" aria-label="Navigasi kasir"><span class="nav-caption">RUANG KASIR</span><a class="nav-link" href="/pos"><span class="nav-icon">▦</span>Kasir POS</a><a class="nav-link" href="/pos?view=history"><span class="nav-icon">▤</span>Transaksi saya</a><a class="nav-link active" href="/pos/stock" aria-current="page"><span class="nav-icon">♧</span>Stok barang</a></nav>
+        <div class="sidebar-bottom"><div class="cashier-badge"><span class="avatar" id="cashier-avatar">K</span><span><strong id="cashier-name">Kasir</strong><small>Kasir · Informasi stok</small></span></div><button class="logout-button" id="logout-button" type="button"><span>↪</span>Keluar</button></div>
+      </aside>
+      <div class="main-column">
+        <header class="topbar"><div class="breadcrumbs"><span>Gourmet's Coffee Co.</span><b>/</b><strong>Stok barang</strong></div><div class="topbar-meta"><span id="today-label"></span></div></header>
+        <main class="workspace stock-workspace">
+          <section class="workspace-heading"><div><p class="eyebrow">INFORMASI UNTUK KASIR</p><h1>Stok barang</h1><p class="subheading">Baca saldo bahan dan barang per lokasi. Perubahan stok hanya dilakukan melalui proses admin.</p></div><span class="readonly-pill">Baca-saja</span></section>
+          <div id="stock-error" class="stock-error hidden" role="alert"></div>
+          <div class="stock-notice"><span>i</span><p><strong>Jumlah tersedia</strong> sudah memperhitungkan reservasi pesanan dan lot kedaluwarsa. Saldo fisik tetap ditampilkan terpisah.</p></div>
+          <section class="stock-panel">
+            <div class="stock-toolbar">
+              <label class="stock-search"><span>⌕</span><input id="stock-search" type="search" placeholder="Cari nama barang, SKU, atau kategori…" autocomplete="off"></label>
+              <div class="stock-filters">
+                <label><span>Kategori</span><select id="stock-category-filter"><option value="all">Semua kategori</option></select></label>
+                <label><span>Lokasi</span><select id="stock-location-filter"><option value="all">Semua lokasi</option></select></label>
+                <label><span>Kedaluwarsa</span><select id="stock-expiry-filter"><option value="all">Semua stok</option><option value="expired">Sudah kedaluwarsa</option><option value="soon">Kedaluwarsa ≤ 30 hari</option><option value="dated">Punya tanggal expiry</option></select></label>
+                <label><span>Urutkan</span><select id="stock-sort"><option value="name">Nama A–Z</option><option value="expiry">Expired terdekat</option><option value="available">Stok tersedia terbanyak</option></select></label>
+              </div>
+              <span id="stock-count" class="stock-count">Memuat stok…</span>
+            </div>
+            <div class="stock-table-scroll"><table class="stock-table"><thead><tr><th>Barang / SKU</th><th>Kategori</th><th>Lokasi</th><th>Saldo fisik</th><th>Tersedia untuk dijual</th><th>Expired terdekat</th><th>Status</th></tr></thead><tbody id="stock-body"><tr><td colspan="7" class="stock-empty">Memuat data stok…</td></tr></tbody></table></div>
+            <footer class="stock-footnote">Saldo bersumber dari ledger stok. Angka ketersediaan adalah snapshot dan bisa berubah saat transaksi berlangsung.</footer>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

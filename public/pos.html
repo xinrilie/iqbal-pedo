@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f7f5ef">
+    <title>Kasir POS · Gourmet's Coffee Co.</title>
+    <link rel="stylesheet" href="/pos.css">
+    <script src="/pos.js" defer></script>
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="/pos" aria-label="Gourmet's Coffee Co. POS">
+          <span class="brand-mark" aria-hidden="true"><img src="/pos-assets/gourmets-logo.png" alt=""></span>
+          <span class="brand-copy"><strong>GOURMET'S</strong><small>COFFEE CO. · CAFÉ & MART</small></span>
+        </a>
+
+        <div class="outlet-card">
+          <span class="outlet-label">OUTLET AKTIF</span>
+          <strong id="sidebar-outlet">Belum dipilih</strong>
+          <span id="sidebar-location">Atur outlet saat masuk</span>
+        </div>
+
+        <nav class="side-nav" aria-label="Navigasi kasir">
+          <span class="nav-caption">RUANG KASIR</span>
+          <button class="nav-link active" type="button" data-nav="pos"><span class="nav-icon">▦</span>Kasir POS</button>
+          <button class="nav-link" type="button" data-nav="history"><span class="nav-icon">▤</span>Transaksi saya</button>
+          <a class="nav-link" href="/pos/stock"><span class="nav-icon">♧</span>Stok barang</a>
+          <a class="nav-link admin-entry" id="admin-entry" href="/admin"><span class="nav-icon">▦</span>Panel operasional</a>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="cashier-badge"><span class="avatar" id="cashier-avatar">K</span><span><strong id="cashier-name">Kasir</strong><small id="cashier-shift-state">Kasir · Shift belum dibuka</small></span></div>
+          <button class="logout-button" id="logout-button" type="button"><span>↪</span>Keluar</button>
+        </div>
+      </aside>
+
+      <div class="main-column">
+        <header class="topbar">
+          <div class="breadcrumbs"><span>Gourmet's Coffee Co.</span><b>/</b><strong>Point of sale</strong></div>
+          <div class="topbar-meta"><button class="shift-pill" id="shift-action" type="button"><i></i><span id="shift-label">Shift belum dibuka</span></button><span id="today-label"></span></div>
+        </header>
+
+        <main class="workspace">
+          <section class="workspace-heading">
+            <div><p class="eyebrow">KASIR · PESANAN BARU</p><h1>Semua kebutuhan, satu kasir.</h1><p class="subheading" id="welcome-line">Kafe, camilan, alat tulis, dan kebutuhan harian dalam satu keranjang.</p></div>
+            <div class="drawer-actions"><button class="outline-button" id="cash-movement-button" type="button"><span aria-hidden="true">↕</span>Kas masuk/keluar</button><button class="outline-button drawer-button" id="drawer-button" type="button"><span aria-hidden="true">▣</span>Buka laci</button></div>
+          </section>
+
+          <section class="pos-layout" id="pos-layout">
+            <div class="catalog-panel">
+              <label class="search-box"><span class="search-icon" aria-hidden="true"></span><input id="search-input" type="search" placeholder="Cari menu, nama barang, SKU…" autocomplete="off"><kbd>Ctrl K</kbd></label>
+              <div class="category-row" id="category-row" aria-label="Kategori produk"></div>
+              <div class="section-title"><h2>Produk tersedia</h2><span id="catalog-count">Memuat katalog…</span></div>
+              <div class="menu-grid" id="menu-grid" aria-live="polite"></div>
+              <div class="catalog-note"><span aria-hidden="true">♧</span><span>Menu kafe memakai resep dan diteruskan ke barista. Barang retail dipotong langsung dari stok SKU.</span></div>
+            </div>
+
+            <aside class="cart-panel" id="cart-panel" role="dialog" aria-modal="true" aria-label="Keranjang pesanan" aria-hidden="true">
+              <div class="cart-heading"><div><h2>Pesanan saat ini</h2><span id="order-reference">Keranjang baru</span></div><div class="cart-heading-actions"><button class="more-button" id="clear-cart" type="button" aria-label="Kosongkan keranjang" title="Kosongkan keranjang">···</button><button class="close-cart" id="close-cart" type="button" aria-label="Tutup keranjang">×</button></div></div>
+              <div class="order-type-row" role="group" aria-label="Tipe pesanan"><button type="button" class="type-button selected" data-order-type="takeaway">Bawa pulang</button><button type="button" class="type-button" data-order-type="dine_in">Dine-in</button></div>
+              <label class="location-field" id="location-field"><span>Lokasi stok</span><select id="stock-location-select" aria-label="Lokasi stok"></select></label>
+              <label class="table-field" id="table-field">Nomor meja<input id="table-label" maxlength="40" placeholder="Contoh: A-03"></label>
+              <div class="cart-lines" id="cart-lines"><div class="empty-cart"><span class="empty-cart-icon">＋</span><strong>Keranjang masih kosong</strong><span>Pilih menu untuk mulai membuat pesanan.</span></div></div>
+              <label class="note-field"><span>Catatan pesanan</span><textarea id="customer-note" maxlength="1000" rows="2" placeholder="Contoh: tanpa sedotan"></textarea></label>
+              <div class="cart-summary"><div><span>Subtotal</span><strong id="subtotal-value">Rp0</strong></div><div><span>Pajak</span><strong id="tax-value">Dihitung saat lanjut</strong></div><div class="discount-line"><span>Diskon</span><strong>Rp0</strong></div><div class="total-line"><span>Total sementara</span><strong id="total-value">Rp0</strong></div></div>
+              <button class="pay-button" id="checkout-button" type="button" disabled><span id="checkout-label">Lanjut bayar</span><span class="pay-arrow">→</span></button>
+              <p class="cart-footnote">Draft dan stok belum disimpan. Stok dipotong setelah pembayaran berhasil.</p>
+            </aside>
+          </section>
+
+          <section class="history-view hidden" id="history-view">
+            <div class="section-title"><div><p class="eyebrow">RIWAYAT SESI INI</p><h2>Transaksi saya</h2></div><span>Disimpan pada sesi browser ini</span></div>
+            <div id="history-list" class="history-list"></div>
+          </section>
+
+          <section class="success-view hidden" id="success-view" aria-live="polite"></section>
+          <footer class="page-footer"><span>GOURMET'S COFFEE CO. · POINT OF SALE</span><span>Kasir pribadi · Akses sesuai peran</span></footer>
+        </main>
+      </div>
+    </div>
+
+    <button id="cart-backdrop" class="cart-backdrop hidden" type="button" aria-label="Tutup keranjang"></button>
+    <button id="cart-launcher" class="cart-launcher hidden" type="button" aria-label="Buka keranjang">
+      <span class="cart-launcher-icon" aria-hidden="true">▣</span>
+      <span class="cart-launcher-copy"><strong>Keranjang</strong><small id="floating-cart-count">0 item</small></span>
+      <span class="cart-launcher-amount"><small>Subtotal</small><strong id="floating-cart-total">Rp0</strong></span><span class="cart-launcher-arrow" aria-hidden="true">→</span>
+    </button>
+
+    <div id="stock-alert-modal" class="stock-alert-backdrop hidden" role="presentation">
+      <section class="stock-alert-dialog" role="alertdialog" aria-modal="true" aria-labelledby="stock-alert-title" aria-describedby="stock-alert-message">
+        <button id="stock-alert-close" class="stock-alert-close" type="button" aria-label="Tutup peringatan">×</button>
+        <span class="stock-alert-symbol" aria-hidden="true">!</span>
+        <p class="eyebrow">PEMERIKSAAN STOK</p>
+        <h2 id="stock-alert-title">Stok tidak mencukupi</h2>
+        <p id="stock-alert-message"></p>
+        <button id="stock-alert-confirm" class="stock-alert-confirm" type="button">Mengerti</button>
+      </section>
+    </div>
+
+    <section class="login-screen hidden" id="login-screen" aria-label="Masuk ke kasir">
+      <div class="login-brand"><span class="brand-mark large" aria-hidden="true"><img src="/pos-assets/gourmets-logo.png" alt=""></span><span><strong>GOURMET'S COFFEE CO.</strong><small>CAFÉ & MART · POINT OF SALE</small></span></div>
+      <div class="login-card"><p class="eyebrow">SELAMAT DATANG</p><h1>Masuk ke kasir</h1><p class="login-intro">Masuk ke outlet Gourmet's Coffee Co. untuk mulai menerima pesanan.</p>
+        <form id="login-form">
+          <label>Username<input name="username" type="text" required autocomplete="username" placeholder="admin" autocapitalize="none"></label>
+          <label>Password<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password"></label>
+          <p class="login-error hidden" id="login-error" role="alert"></p>
+          <button class="pay-button login-submit" type="submit"><span>Masuk</span><span>→</span></button>
+        </form>
+        <p class="login-safety"><span>♧</span>Transaksi berjalan dengan perlindungan stok dan pencatatan otomatis.</p>
+      </div>
+      <span class="login-version">GCIMS POS · MODE UJI</span>
+    </section>
+
+    <div class="modal-backdrop hidden" id="payment-modal" role="presentation">
+      <section class="payment-dialog" role="dialog" aria-modal="true" aria-labelledby="payment-title">
+        <button class="dialog-close" id="close-payment" type="button" aria-label="Tutup">×</button>
+        <div class="dialog-icon">Rp</div><p class="eyebrow">PEMBAYARAN TUNAI</p><h2 id="payment-title">Terima pembayaran</h2><p class="dialog-copy">Tagihan order <strong id="payment-order-number"></strong></p>
+        <div class="amount-due"><span>Total tagihan</span><strong id="amount-due-value">Rp0</strong></div>
+        <label class="cash-input-label">Uang diterima<div class="cash-input-wrap"><span>Rp</span><input id="cash-received" type="number" min="0" step="1000" inputmode="numeric"></div></label>
+        <div class="quick-cash" id="quick-cash"></div>
+        <div class="change-row"><span>Kembalian</span><strong id="change-value">Rp0</strong></div>
+        <p class="payment-error hidden" id="payment-error" role="alert"></p>
+        <button class="pay-button confirm-payment" id="confirm-payment" type="button"><span>Konfirmasi tunai</span><span>→</span></button>
+        <p class="dialog-footnote">Mode uji · Hanya untuk penggunaan internal di database db_gcims_test.</p>
+      </section>
+    </div>
+
+    <div class="modal-backdrop hidden" id="shift-modal" role="presentation">
+      <section class="payment-dialog" role="dialog" aria-modal="true" aria-labelledby="shift-title">
+        <button class="dialog-close" id="close-shift" type="button" aria-label="Tutup">×</button>
+        <div class="dialog-icon">Rp</div><p class="eyebrow">OPERASIONAL KASIR</p><h2 id="shift-title">Mulai shift</h2>
+        <p class="dialog-copy" id="shift-copy">Hitung uang awal di laci sebelum mulai menerima pesanan.</p>
+        <form id="shift-form" class="shift-form">
+          <label class="shift-note hidden" id="cash-event-type-label">Jenis aktivitas<select id="cash-event-type"><option value="cash_in">Kas masuk</option><option value="cash_out">Kas keluar</option></select></label>
+          <label class="cash-input-label" id="shift-amount-label">Modal awal<div class="cash-input-wrap"><span>Rp</span><input id="shift-amount" type="number" min="0" step="1000" inputmode="numeric" required></div></label>
+          <div class="shift-expected hidden" id="shift-expected"></div>
+          <label class="shift-note hidden" id="shift-note-label">Catatan penutupan<textarea id="shift-note" maxlength="500" rows="2" placeholder="Opsional"></textarea></label>
+          <p class="payment-error hidden" id="shift-error" role="alert"></p>
+          <button class="pay-button confirm-payment" id="save-shift" type="submit"><span>Mulai shift</span><span>→</span></button>
+        </form>
+      </section>
+    </div>
+
+    <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>

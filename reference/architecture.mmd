@@ -1,0 +1,9 @@
+flowchart LR
+    POS[Frontend Kasir / Admin / Barista] --> API[Fastify API v1]
+    API --> AUTH[JWT + RBAC + outlet scope]
+    AUTH --> SVC[Application Services]
+    SVC --> DB[(PostgreSQL schema gcims)]
+    SVC --> OUTBOX[Transactional outbox]
+    OUTBOX -. worker belum dibuat .-> WORKER[Background publisher]
+    SVC -. provider belum dipilih .-> PAY[Payment Gateway / QRIS]
+    DB --> KDS[KDS tickets + events]
