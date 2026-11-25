@@ -29,6 +29,7 @@ const CashierCreate = z.object({
 });
 const CashierStatus = z.object({ is_active: z.boolean() });
 const CashierPassword = z.object({ password: z.string().min(6).max(200).refine(isBcryptPasswordLengthValid, 'Password maksimal 72 byte.') });
+const AdminCreate = CashierCreate;
 const RecipeUpdate = z.object({
   items: z.array(z.object({
     inventory_item_id: z.string().uuid(),
@@ -328,6 +329,95 @@ export async function adminRoutes(app) {
       [request.gcims.companyId, request.gcims.outletId, request.gcims.userId]
     );
     return { data: result.rows };
+  });
+
+  app.get('/admin/admins', { preHandler: [app.authenticate, app.requirePermission('admin.users.read')] }, async (request) => {
+    const result = await pool.query(
+      `SELECT u.id,u.full_name,split_part(u.email,'@',1) AS username,u.is_active,u.last_login_at
+         FROM gcims.users u
+         JOIN gcims.company_memberships cm ON cm.company_id=$1 AND cm.user_id=u.id AND cm.membership_status='active'
+         JOIN gcims.user_role_assignments ura ON ura.company_id=cm.company_id AND ura.user_id=cm.user_id AND ura.outlet_id IS NULL
+         JOIN gcims.roles r ON r.company_id=ura.company_id AND r.id=ura.role_id AND r.code='ADMIN' AND r.scope='company'
+        ORDER BY u.is_active DESC,u.full_name,u.id`, [request.gcims.companyId]
+    );
+    return { data: result.rows };
+  });
+
+  app.post('/admin/admins', { preHandler: [app.authenticate, app.requirePermission('admin.users.manage')] }, async (request, reply) => {
+    const parsed = AdminCreate.safeParse(request.body);
+    if (!parsed.success) throw badRequest('Data akun admin tidak valid.', parsed.error.issues);
+    const { companyId, outletId, userId } = request.gcims;
+    const hash = await bcrypt.hash(parsed.data.password, 12);
+    try {
+      const admin = await withTransaction(async (client) => {
+        const role = await client.query(
+          `SELECT id FROM gcims.roles WHERE company_id=$1 AND code='ADMIN' AND scope='company' FOR UPDATE`, [companyId]
+        );
+        if (!role.rowCount) throw conflict('ADMIN_ROLE_NOT_CONFIGURED', 'Role Admin belum disiapkan. Jalankan bootstrap admin pada database uji.');
+        const inserted = await client.query(
+          `INSERT INTO gcims.users(full_name,email,password_hash) VALUES($1,$2,$3)
+           RETURNING id,full_name,split_part(email,'@',1) AS username,is_active`,
+          [parsed.data.full_name,`${parsed.data.username}@local.test`,hash]
+        );
+        const created = inserted.rows[0];
+        await client.query(`INSERT INTO gcims.company_memberships(company_id,user_id,membership_status,joined_at) VALUES($1,$2,'active',now())`,[companyId,created.id]);
+        await client.query(`INSERT INTO gcims.user_role_assignments(company_id,user_id,role_id,outlet_id,assigned_by) VALUES($1,$2,$3,NULL,$4)`,[companyId,created.id,role.rows[0].id,userId]);
+        await client.query(
+          `INSERT INTO gcims.audit_logs(company_id,outlet_id,actor_user_id,action,entity_type,entity_id,after_data)
+           VALUES($1,$2,$3,'admin.admin.created','user',$4,jsonb_build_object('username',$5::text,'role','ADMIN'))`,
+          [companyId,outletId,userId,created.id,parsed.data.username]
+        );
+        return created;
+      });
+      return reply.code(201).send({ admin });
+    } catch (error) {
+      if (error.code === '23505') throw conflict('ADMIN_USERNAME_EXISTS','Username tersebut sudah digunakan.');
+      throw error;
+    }
+  });
+
+  app.patch('/admin/admins/:adminId/status', { preHandler: [app.authenticate, app.requirePermission('admin.users.manage')] }, async (request) => {
+    if (!z.string().uuid().safeParse(request.params.adminId).success) throw notFound('Akun admin tidak ditemukan.');
+    if (request.params.adminId === request.gcims.userId) throw conflict('CANNOT_CHANGE_OWN_ADMIN_STATUS','Akun admin sendiri tidak dapat dinonaktifkan dari sesi yang sedang dipakai.');
+    const parsed = CashierStatus.safeParse(request.body);
+    if (!parsed.success) throw badRequest('Status akun admin tidak valid.', parsed.error.issues);
+    const { companyId,outletId,userId }=request.gcims;
+    return withTransaction(async(client)=>{
+      const role=await client.query(`SELECT id FROM gcims.roles WHERE company_id=$1 AND code='ADMIN' AND scope='company' FOR UPDATE`,[companyId]);
+      if(!role.rowCount)throw notFound('Role admin tidak ditemukan.');
+      const target=await client.query(
+        `SELECT u.id,u.is_active FROM gcims.users u
+         JOIN gcims.company_memberships cm ON cm.company_id=$1 AND cm.user_id=u.id AND cm.membership_status='active'
+         JOIN gcims.user_role_assignments ura ON ura.company_id=cm.company_id AND ura.user_id=u.id AND ura.outlet_id IS NULL AND ura.role_id=$2
+         WHERE u.id=$3 FOR UPDATE OF u`,[companyId,role.rows[0].id,request.params.adminId]
+      );
+      if(!target.rowCount)throw notFound('Akun admin tidak ditemukan.');
+      if(target.rows[0].is_active&&!parsed.data.is_active){
+        const activeCount=await client.query(`SELECT COUNT(DISTINCT u.id)::integer AS count FROM gcims.users u JOIN gcims.company_memberships cm ON cm.company_id=$1 AND cm.user_id=u.id AND cm.membership_status='active' JOIN gcims.user_role_assignments ura ON ura.company_id=cm.company_id AND ura.user_id=u.id AND ura.role_id=$2 AND ura.outlet_id IS NULL WHERE u.is_active`,[companyId,role.rows[0].id]);
+        if(activeCount.rows[0].count<=1)throw conflict('LAST_ACTIVE_ADMIN','Minimal satu akun admin aktif harus tetap tersedia.');
+      }
+      const updated=await client.query(`UPDATE gcims.users SET is_active=$2,auth_token_version=auth_token_version+1,updated_at=now() WHERE id=$1 RETURNING id,full_name,is_active`,[request.params.adminId,parsed.data.is_active]);
+      await client.query(`INSERT INTO gcims.audit_logs(company_id,outlet_id,actor_user_id,action,entity_type,entity_id,before_data,after_data) VALUES($1,$2,$3,'admin.admin.status_changed','user',$4,jsonb_build_object('is_active',$5::boolean),jsonb_build_object('is_active',$6::boolean))`,[companyId,outletId,userId,request.params.adminId,target.rows[0].is_active,parsed.data.is_active]);
+      return {admin:updated.rows[0]};
+    });
+  });
+
+  app.post('/admin/admins/:adminId/password', { preHandler: [app.authenticate, app.requirePermission('admin.users.manage')] }, async (request) => {
+    if (!z.string().uuid().safeParse(request.params.adminId).success) throw notFound('Akun admin tidak ditemukan.');
+    const parsed=CashierPassword.safeParse(request.body);
+    if(!parsed.success)throw badRequest('Password baru tidak valid.',parsed.error.issues);
+    const hash=await bcrypt.hash(parsed.data.password,12);const {companyId,outletId,userId}=request.gcims;
+    await withTransaction(async(client)=>{
+      const updated=await client.query(
+        `UPDATE gcims.users u SET password_hash=$3,auth_token_version=auth_token_version+1,updated_at=now()
+          FROM gcims.company_memberships cm JOIN gcims.user_role_assignments ura ON ura.company_id=cm.company_id AND ura.user_id=cm.user_id AND ura.outlet_id IS NULL JOIN gcims.roles r ON r.company_id=ura.company_id AND r.id=ura.role_id AND r.code='ADMIN' AND r.scope='company'
+         WHERE cm.company_id=$1 AND cm.user_id=u.id AND cm.membership_status='active' AND ura.company_id=$1 AND u.id=$2 RETURNING u.id`,
+        [companyId,request.params.adminId,hash]
+      );
+      if(!updated.rowCount)throw notFound('Akun admin tidak ditemukan.');
+      await client.query(`INSERT INTO gcims.audit_logs(company_id,outlet_id,actor_user_id,action,entity_type,entity_id) VALUES($1,$2,$3,'admin.admin.password_reset','user',$4)`,[companyId,outletId,userId,request.params.adminId]);
+    });
+    return {ok:true};
   });
 
   app.post('/admin/cashiers', { preHandler: [app.authenticate, app.requirePermission('admin.users.manage')] }, async (request, reply) => {

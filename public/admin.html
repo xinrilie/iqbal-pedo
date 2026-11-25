@@ -105,12 +105,18 @@
           </section>
 
           <section id="cashiers-page" class="page-view hidden">
-            <header class="page-heading"><div><p class="eyebrow">AKSES KASIR</p><h1>Akun kasir</h1><p class="muted">Admin dapat membuat dan menonaktifkan akun kasir, serta mengatur ulang password.</p></div><span class="date-chip" id="cashier-count">Memuat…</span></header>
+            <header class="page-heading"><div><p class="eyebrow">AKSES PENGGUNA</p><h1>Akun kasir & admin</h1><p class="muted">Kelola akses kasir dan admin. Persetujuan dokumen opname perlu dibuat oleh admin yang berbeda.</p></div><span class="date-chip" id="cashier-count">Memuat…</span></header>
             <div class="cashier-layout">
               <section class="panel create-cashier-panel"><header class="panel-heading"><div><h2>Tambah akun kasir</h2><p>Akun baru langsung mendapat role Kasir untuk outlet aktif.</p></div></header>
                 <form id="cashier-create-form" class="cashier-form"><label>Nama lengkap<input name="full_name" maxlength="160" required></label><label>Username<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9._-]+" autocomplete="off" required><small>3–32 karakter: huruf, angka, titik, garis bawah, atau strip.</small></label><label>Password awal<input name="password" type="password" minlength="6" maxlength="200" autocomplete="new-password" required><small>Minimal 6 karakter. Berikan password secara langsung ke kasir.</small></label><p id="cashier-form-error" class="login-error hidden" role="alert"></p><button class="primary-button" type="submit"><span>Buat akun kasir</span><span>＋</span></button></form>
               </section>
               <section class="panel cashier-list-panel"><header class="panel-heading"><div><h2>Daftar kasir</h2><p>Status akses, shift aktif, dan jumlah transaksi lunas.</p></div></header><div class="table-scroll"><table><thead><tr><th>Kasir</th><th>Status akun</th><th>Login terakhir</th><th>Transaksi</th><th>Shift</th><th>Aksi</th></tr></thead><tbody id="cashier-body"><tr><td colspan="6" class="table-empty">Memuat akun…</td></tr></tbody></table></div></section>
+            </div>
+            <div class="cashier-layout admin-account-layout">
+              <section class="panel create-cashier-panel"><header class="panel-heading"><div><h2>Tambah akun admin</h2><p>Akun mendapat izin admin perusahaan dan dapat menjadi penyetuju.</p></div></header>
+                <form id="admin-create-form" class="cashier-form"><label>Nama lengkap<input name="full_name" maxlength="160" required></label><label>Username<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9._-]+" autocomplete="off" required></label><label>Password awal<input name="password" type="password" minlength="6" maxlength="200" autocomplete="new-password" required><small>Minimal 6 karakter. Bagikan secara langsung ke pemilik akun.</small></label><p id="admin-form-error" class="login-error hidden" role="alert"></p><button class="primary-button" type="submit"><span>Buat akun admin</span><span>＋</span></button></form>
+              </section>
+              <section class="panel cashier-list-panel"><header class="panel-heading"><div><h2>Daftar admin</h2><p>Admin aktif dapat menyetujui dokumen yang dibuat admin lain.</p></div></header><div class="table-scroll"><table><thead><tr><th>Admin</th><th>Status</th><th>Login terakhir</th><th>Aksi</th></tr></thead><tbody id="admin-body"><tr><td colspan="4" class="table-empty">Memuat akun admin…</td></tr></tbody></table></div></section>
             </div>
           </section>
 
