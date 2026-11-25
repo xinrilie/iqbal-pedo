@@ -2,7 +2,7 @@
 
 ## File layout
 
-- `migrations/` contains the ordered schema changes (`0001`–`0011`). Apply each only once, in order.
+- `migrations/` contains the ordered schema changes (`0001`–`0012`). Apply each only once, in order.
 - `seeds/` contains permission and optional demo-data inserts; these do not define schema.
 - `preflight/` contains read-only checks that must pass before the matching migration.
 - `dev/` contains test-only stock fixtures. Review their comments and target database before use.
@@ -67,6 +67,7 @@ $Psql = 'psql' # If psql is not on PATH, set this to the full path of psql.exe.
 & $Psql "$env:DATABASE_URL" -X -v ON_ERROR_STOP=1 -f .\db\migrations\0009_admin_accounts_reports.sql
 & $Psql "$env:DATABASE_URL" -X -v ON_ERROR_STOP=1 -f .\db\migrations\0010_catalog_reference_alignment.sql
 & $Psql "$env:DATABASE_URL" -X -v ON_ERROR_STOP=1 -f .\db\migrations\0011_retail_products.sql
+& $Psql "$env:DATABASE_URL" -X -v ON_ERROR_STOP=1 -f .\db\migrations\0012_auth_session_revocation.sql
 # Test database only; the seed itself checks that the target is db_gcims_test.
 & $Psql "$env:DATABASE_URL" -X -v ON_ERROR_STOP=1 -f .\db\seeds\seed_ready_operational_catalog.sql
 ```
@@ -77,6 +78,6 @@ The preflight scripts open read-only transactions and end with `ROLLBACK`; they 
 
 Do not run the baseline schema or replay `migration_sesi2`, `003`, or `004`. Confirm which migrations have already been applied, take a backup, and run only the outstanding migration(s) after checking the database state. There is no automatic migration runner/version ledger in this MVP; keep an operator-controlled record of applied files.
 
-For the already initialized local `db_gcims_test`, migrations `0010_catalog_reference_alignment.sql` and `seed_ready_operational_catalog.sql` were applied on 16 November 2026; migration `0011_retail_products.sql` was applied on 20 November 2026. The catalog import leaves the 109 existing sales orders intact. Do not replay these files on that database.
+For the already initialized local `db_gcims_test`, migrations `0010_catalog_reference_alignment.sql` and `seed_ready_operational_catalog.sql` were applied on 16 November 2026; migration `0011_retail_products.sql` was applied on 20 November 2026. Migration `0012_auth_session_revocation.sql` is pending and must be applied once before running the updated app. The catalog import leaves the 109 existing sales orders intact. Do not replay applied migrations or seeds on that database.
 
 Migration filenames are numbered and intentionally kept stable for installations that already applied them. Some early filenames use session-based names; do not rename them. Use the next available four-digit prefix for new schema changes and update this file in the same pull request. A migration-history table/automatic runner is not implemented yet, so each collaborator must record applied migrations for their own database.

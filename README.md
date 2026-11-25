@@ -50,7 +50,7 @@ Open `http://127.0.0.1:3000/`. Login sends Admin to `/admin` and Cashier to `/po
 
 Start with [`db/README.md`](db/README.md) for the canonical setup order and PowerShell commands. Never replay the baseline schema or an already applied migration on a database with data. Treat numbered migrations as immutable after sharing: make the next numbered migration for every schema change. Keep seeds, preflight checks, and test fixtures separate from migrations.
 
-The current retail catalog support is migration `0011_retail_products.sql`. It adds retail product mapping and convenience-store categories. Applying a migration changes the database schema; the app cannot use this feature until the migration is applied to its target database.
+The current retail catalog support is migration `0011_retail_products.sql`. Migration `0012_auth_session_revocation.sql` adds session revocation after password or account status changes. Applying a migration changes the database schema; the app needs all numbered migrations before startup.
 
 ## Useful commands
 

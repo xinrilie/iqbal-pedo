@@ -11,10 +11,10 @@ export async function registerAuth(app) {
     } catch {
       throw unauthorized('Token akses tidak valid atau kedaluwarsa.');
     }
-    const { sub, company_id: companyId, outlet_id: outletId } = request.user ?? {};
+    const { sub, company_id: companyId, outlet_id: outletId, token_version: tokenVersion } = request.user ?? {};
     if (!sub || !companyId || !outletId) throw unauthorized('Token tidak memiliki scope perusahaan/outlet.');
     const active = await pool.query(
-      `SELECT 1
+      `SELECT u.auth_token_version
          FROM gcims.users u
          JOIN gcims.company_memberships cm ON cm.user_id = u.id AND cm.company_id = $2
          JOIN gcims.companies c ON c.id = cm.company_id AND c.is_active = TRUE
@@ -24,6 +24,9 @@ export async function registerAuth(app) {
       [sub, companyId, outletId]
     );
     if (!active.rowCount) throw unauthorized('Akun, membership, atau outlet sudah tidak aktif.');
+    if (!Number.isSafeInteger(tokenVersion) || tokenVersion !== active.rows[0].auth_token_version) {
+      throw unauthorized('Sesi sudah dicabut. Silakan masuk kembali.');
+    }
     request.gcims = { userId: sub, companyId, outletId };
   });
 
@@ -54,7 +57,7 @@ export async function loginWithPassword({ username, email, password, companyId, 
   const identifier = username ?? email;
   const scopedLogin = Boolean(companyId && outletId);
   const result = await pool.query(
-    `SELECT DISTINCT u.id, u.full_name, u.email, u.password_hash,
+    `SELECT DISTINCT u.id, u.full_name, u.email, u.password_hash, u.auth_token_version,
             c.id AS company_id, o.id AS outlet_id
        FROM gcims.users u
        JOIN gcims.company_memberships cm ON cm.user_id = u.id
@@ -81,6 +84,7 @@ export async function loginWithPassword({ username, email, password, companyId, 
   const user = matchingUsers[0];
   return {
     id: user.id, full_name: user.full_name, email: user.email,
-    company_id: user.company_id, outlet_id: user.outlet_id
+    company_id: user.company_id, outlet_id: user.outlet_id,
+    auth_token_version: user.auth_token_version
   };
 }

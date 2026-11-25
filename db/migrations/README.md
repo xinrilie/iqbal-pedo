@@ -9,3 +9,5 @@
 - Update [`../README.md`](../README.md) and the project root [`../../README.md`](../../README.md) when the setup order or feature coverage changes.
 
 This MVP has no automatic migration runner or schema version table. Keep a record of files applied to each local database. The canonical setup sequence and PowerShell commands are in [`../README.md`](../README.md).
+
+The latest migration is `0012_auth_session_revocation.sql`. Apply it before starting the updated application; it adds the token version used to revoke existing sessions after password or account status changes.

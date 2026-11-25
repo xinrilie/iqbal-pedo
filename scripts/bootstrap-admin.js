@@ -11,6 +11,7 @@ const adminEmail = env.ADMIN_EMAIL || 'admin@local.test';
 const adminName = env.ADMIN_NAME || 'Prototype Admin';
 const adminPassword = env.ADMIN_PASSWORD || 'admin';
 if (!usePrototypeAdmin && adminPassword.length < 12) throw new Error('ADMIN_PASSWORD minimal 12 karakter.');
+if (Buffer.byteLength(adminPassword, 'utf8') > 72) throw new Error('ADMIN_PASSWORD maksimal 72 byte untuk bcrypt.');
 
 const companyCode = env.BOOTSTRAP_COMPANY_CODE || env.GCIMS_DEFAULT_COMPANY_CODE || 'GOURMET-COFFEE';
 const companyName = env.BOOTSTRAP_COMPANY_NAME || 'Gourmet Coffee';
@@ -96,7 +97,8 @@ try {
     if (userResult.rowCount) {
       userId = userResult.rows[0].id;
       await client.query(
-        `UPDATE gcims.users SET full_name = $2, password_hash = $3, is_active = TRUE, updated_at = now()
+        `UPDATE gcims.users SET full_name = $2, password_hash = $3, is_active = TRUE,
+          auth_token_version = auth_token_version + 1, updated_at = now()
           WHERE id = $1`, [userId, adminName, hash]
       );
     } else {

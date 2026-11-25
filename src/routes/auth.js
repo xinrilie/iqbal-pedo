@@ -2,15 +2,16 @@ import { z } from 'zod';
 import { loginWithPassword } from '../auth.js';
 import { badRequest } from '../lib/errors.js';
 import { pool } from '../lib/db.js';
-import { toLoginCredentials } from '../lib/auth-input.js';
+import { isBcryptPasswordLengthValid, toLoginCredentials } from '../lib/auth-input.js';
+import { config } from '../config.js';
 
 const PrototypeLoginSchema = z.object({
   username: z.string().trim().min(1).max(254),
-  password: z.string().min(1).max(200)
+  password: z.string().min(1).max(200).refine(isBcryptPasswordLengthValid, 'Password terlalu panjang untuk algoritma hash yang digunakan.')
 });
 const ScopedLoginSchema = z.object({
   email: z.string().email().max(254),
-  password: z.string().min(1).max(200),
+  password: z.string().min(1).max(200).refine(isBcryptPasswordLengthValid, 'Password terlalu panjang untuk algoritma hash yang digunakan.'),
   company_id: z.string().uuid(),
   outlet_id: z.string().uuid()
 });
@@ -23,11 +24,11 @@ export async function authRoutes(app) {
     const user = await loginWithPassword(toLoginCredentials(parsed.data));
     const token = app.jwt.sign(
       { company_id: user.company_id, outlet_id: user.outlet_id },
-      { sub: user.id, expiresIn: process.env.JWT_TTL || '15m' }
+      { sub: user.id, token_version: user.auth_token_version, expiresIn: config.JWT_TTL }
     );
     await pool.query('UPDATE gcims.users SET last_login_at = now() WHERE id = $1', [user.id]);
-    const { company_id: companyId, outlet_id: outletId, ...publicUser } = user;
-    return reply.code(200).send({ access_token: token, token_type: 'Bearer', expires_in: process.env.JWT_TTL || '15m', user: publicUser, scope: { company_id: companyId, outlet_id: outletId } });
+    const { company_id: companyId, outlet_id: outletId, auth_token_version: _tokenVersion, ...publicUser } = user;
+    return reply.code(200).send({ access_token: token, token_type: 'Bearer', expires_in: config.JWT_TTL, user: publicUser, scope: { company_id: companyId, outlet_id: outletId } });
   });
 
   app.get('/auth/me', { preHandler: [app.authenticate] }, async (request) => {

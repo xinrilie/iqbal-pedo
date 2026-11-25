@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { isBcryptPasswordLengthValid } from '../lib/auth-input.js';
 import { pool, withTransaction } from '../lib/db.js';
 import { badRequest, conflict, notFound, unprocessable } from '../lib/errors.js';
 
@@ -24,10 +25,10 @@ const ReportQuery = z.object({
 const CashierCreate = z.object({
   username: z.string().trim().toLowerCase().regex(/^[a-z0-9._-]{3,32}$/),
   full_name: z.string().trim().min(2).max(160),
-  password: z.string().min(6).max(200)
+  password: z.string().min(6).max(200).refine(isBcryptPasswordLengthValid, 'Password maksimal 72 byte.')
 });
 const CashierStatus = z.object({ is_active: z.boolean() });
-const CashierPassword = z.object({ password: z.string().min(6).max(200) });
+const CashierPassword = z.object({ password: z.string().min(6).max(200).refine(isBcryptPasswordLengthValid, 'Password maksimal 72 byte.') });
 const RecipeUpdate = z.object({
   items: z.array(z.object({
     inventory_item_id: z.string().uuid(),
@@ -390,7 +391,7 @@ export async function adminRoutes(app) {
         if (openShift.rowCount) throw conflict('CASHIER_HAS_OPEN_SHIFT','Kasir masih memiliki shift aktif. Tutup shift sebelum menonaktifkan akun.');
       }
       const updated = await client.query(
-        `UPDATE gcims.users SET is_active=$2,updated_at=now() WHERE id=$1
+        `UPDATE gcims.users SET is_active=$2,auth_token_version=auth_token_version+1,updated_at=now() WHERE id=$1
          RETURNING id,full_name,is_active`, [request.params.cashierId,parsed.data.is_active]
       );
       await client.query(
@@ -410,7 +411,7 @@ export async function adminRoutes(app) {
     const { companyId, outletId, userId } = request.gcims;
     await withTransaction(async (client) => {
       const result = await client.query(
-        `UPDATE gcims.users u SET password_hash=$4,updated_at=now()
+        `UPDATE gcims.users u SET password_hash=$4,auth_token_version=auth_token_version+1,updated_at=now()
           FROM gcims.user_role_assignments ura JOIN gcims.roles r ON r.company_id=ura.company_id AND r.id=ura.role_id
          WHERE u.id=$3 AND ura.company_id=$1 AND ura.user_id=u.id AND ura.outlet_id=$2 AND r.code='CASHIER'
          RETURNING u.id`, [companyId,outletId,request.params.cashierId,hash]
