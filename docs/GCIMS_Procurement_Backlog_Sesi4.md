@@ -26,7 +26,7 @@
 - [ ] Test track_lot/track_expiry validations and existing lot metadata mismatch.
 - [ ] Test partial receiving across multiple GRs and status calculation.
 - [ ] Test PO cancel blocked after receiving workflow begins.
-- [ ] Add PO/GR draft editing or explicit discard/recreate workflow.
+- [x] Provide explicit PO draft cancel and Goods Receipt draft delete paths; neither document can be edited after creation.
 - [x] Enforce PO/GR maker-checker in application services and PostgreSQL constraints (`db/migrations/0006_maker_checker_hardening.sql`).
 - [ ] Review any historical self-approved/unknown-maker documents before applying migration 006.
 - [ ] Add supplier return and credit note workflow.
@@ -37,6 +37,18 @@
 
 ## Known constraint from runtime audit
 `goods_receipt_items` originally rejected `quantity_accepted_base = 0`; migration 005 relaxes this because a fully rejected delivery still needs an auditable GR row, while no stock is posted for zero accepted quantity.
+
+## Status update (2026-11-25)
+
+- [x] Admin frontend for supplier create/edit/activate, supplier item/UOM/price catalog, multi-item PO create and state transitions.
+- [x] Goods Receipt frontend from a sent/partially received PO, including partial/rejected quantities, lot/expiry input, maker-checker approval, and stock posting confirmation.
+- [x] Explicitly delete a draft goods receipt with audit logging so an incorrect draft cannot block the PO receiving workflow.
+- [x] Idempotency keys on PO/GR create; a retry with an unchanged form payload reuses its key.
+- [x] Stocktake count, variance reason, maker-checker, posting, and cancellation screens are connected to the ledger service.
+- [ ] Apply migration `0012_auth_session_revocation.sql` on the existing local test database before updated server startup.
+- [ ] Execute the new supplier → multi-line PO → separate-admin approval → receipt → posting flow against PostgreSQL. Node tests validate contracts and rules but do not execute database transactions.
+- [ ] PO editing after draft creation is not provided; draft PO can be cancelled and recreated. Submitted GR cannot be edited or deleted; reject it and create a corrected receipt.
+- [ ] Supplier returns/credit notes, accounts payable, PDF/print/WhatsApp, audit dashboard, and KDS screen remain out of scope.
 
 
 ## Latest local build verification (2026-11-15)

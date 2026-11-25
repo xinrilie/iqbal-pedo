@@ -64,6 +64,26 @@ export async function listSuppliers({ companyId, q, includeInactive = false, lim
   return { data: result.rows };
 }
 
+export async function listProcurementInventoryItems({ companyId }) {
+  const result = await pool.query(
+    `SELECT i.id,i.sku,i.name,i.base_uom_id,u.code AS base_uom_code,i.track_lot,i.track_expiry,
+            jsonb_agg(DISTINCT jsonb_build_object('id',units.uom_id,'code',units.code,'name',units.name)) AS purchase_uoms
+       FROM gcims.inventory_items i
+       JOIN gcims.uoms u ON u.id=i.base_uom_id
+       LEFT JOIN LATERAL (
+         SELECT i.base_uom_id AS uom_id,u.code,u.name
+         UNION
+         SELECT c.from_uom_id,pu.code,pu.name
+           FROM gcims.item_uom_conversions c JOIN gcims.uoms pu ON pu.id=c.from_uom_id
+          WHERE c.company_id=i.company_id AND c.inventory_item_id=i.id
+            AND c.valid_from<=CURRENT_DATE AND (c.valid_to IS NULL OR c.valid_to>=CURRENT_DATE)
+       ) units ON TRUE
+      WHERE i.company_id=$1 AND i.is_active=TRUE
+      GROUP BY i.id,u.code,u.name ORDER BY i.name,i.sku`, [companyId]
+  );
+  return { data: result.rows };
+}
+
 export async function createSupplier({ companyId, userId, body }) {
   return withTransaction(async (client) => {
     const result = await client.query(
@@ -413,6 +433,20 @@ export async function getGoodsReceipt({companyId,outletId,receiptId}){
        LEFT JOIN gcims.inventory_lots l ON l.company_id=gri.company_id AND l.id=gri.lot_id
       WHERE gri.company_id=$1 AND gri.goods_receipt_id=$2 ORDER BY poi.line_no,gri.id`,[companyId,receiptId]);
   return {...header.rows[0],items:lines.rows};
+}
+
+export async function deleteDraftGoodsReceipt({companyId,outletId,receiptId,userId}){
+  return withTransaction(async(client)=>{
+    const result=await client.query(`SELECT * FROM gcims.goods_receipts WHERE company_id=$1 AND outlet_id=$2 AND id=$3 FOR UPDATE`,[companyId,outletId,receiptId]);
+    if(!result.rowCount)throw notFound('Goods receipt tidak ditemukan.');
+    const receipt=result.rows[0];
+    if(receipt.status!=='draft')throw conflict('GOODS_RECEIPT_NOT_DRAFT','Hanya penerimaan berstatus draft yang dapat dihapus.');
+    const count=await client.query('SELECT COUNT(*)::integer AS line_count FROM gcims.goods_receipt_items WHERE company_id=$1 AND goods_receipt_id=$2',[companyId,receiptId]);
+    await client.query('DELETE FROM gcims.goods_receipt_items WHERE company_id=$1 AND goods_receipt_id=$2',[companyId,receiptId]);
+    await client.query('DELETE FROM gcims.goods_receipts WHERE company_id=$1 AND outlet_id=$2 AND id=$3',[companyId,outletId,receiptId]);
+    await writeAudit(client,{companyId,outletId,userId,action:'procurement.receipt.draft_deleted',entityType:'goods_receipt',entityId:receiptId,beforeData:{receipt_number:receipt.receipt_number,status:receipt.status,line_count:count.rows[0].line_count}});
+    return {deleted:true,receipt_number:receipt.receipt_number};
+  });
 }
 
 export async function transitionGoodsReceipt({companyId,outletId,receiptId,userId,action,reason}){

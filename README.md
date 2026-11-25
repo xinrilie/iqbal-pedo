@@ -13,6 +13,8 @@ Prototype point of sale and inventory system for a café and convenience store. 
 
 Authentication is implemented. Login checks an active account and company/outlet membership, then returns a short-lived Bearer JWT (default 15 minutes). Protected API routes verify account and membership status and check permissions such as `pos.order.create` or `admin.inventory.read`. The browser keeps the access token in `sessionStorage`. The prototype bootstrap can create `admin` / `admin` only when connected to `db_gcims_test`; change that password before sharing the database and never use those credentials outside local testing.
 
+The admin panel includes cashier/admin accounts, product and BOM management, inventory filters, stock ledger, stocktake approval/posting, supplier catalog, purchase orders, and goods receipt posting. Account password/status changes revoke existing JWT sessions. Procurement and stocktake approvals use maker-checker checks. The kitchen display is currently API-only; it does not yet have a dedicated staff screen.
+
 ## Quick start
 
 Requirements: Node.js 22+, npm, and PostgreSQL. In PowerShell on Windows, use `npm.cmd` if the execution policy blocks `npm.ps1`.

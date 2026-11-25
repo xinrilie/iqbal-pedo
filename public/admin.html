@@ -27,9 +27,9 @@
           <a href="/admin/menus" data-page="menus"><span>☕</span>Produk & BOM</a>
           <a href="/admin/ledger" data-page="ledger"><span>⇄</span>Ledger stok</a>
           <div class="nav-divider"></div><small>PENGADAAN</small>
-          <a class="nav-disabled" aria-disabled="true" title="Frontend pengadaan belum tersedia"><span>♧</span>Supplier <em>Segera</em></a>
-          <a class="nav-disabled" aria-disabled="true" title="Frontend pengadaan belum tersedia"><span>▤</span>Pengadaan <em>Segera</em></a>
-          <a class="nav-disabled" aria-disabled="true" title="Frontend pengadaan belum tersedia"><span>▣</span>Penerimaan <em>Segera</em></a>
+          <a href="/admin/suppliers" data-page="suppliers"><span>♧</span>Supplier</a>
+          <a href="/admin/purchase-orders" data-page="purchase-orders"><span>▤</span>Purchase order</a>
+          <a href="/admin/goods-receipts" data-page="goods-receipts"><span>▣</span>Penerimaan</a>
           <a href="/admin/stocktakes" data-page="stocktakes"><span>✓</span>Stok opname</a>
         </nav>
         <div class="sidebar-bottom">
@@ -94,6 +94,32 @@
             </form></section>
             <section class="panel stocktake-list-panel"><header class="panel-heading"><div><h2>Daftar opname</h2><p>Satu opname dapat berjalan pada setiap lokasi stok.</p></div></header><div class="table-scroll"><table><thead><tr><th>Nomor</th><th>Lokasi</th><th>Status</th><th>Progress hitung</th><th>Dibuat oleh</th><th>Waktu mulai</th><th></th></tr></thead><tbody id="stocktake-body"><tr><td colspan="7" class="table-empty">Memuat data…</td></tr></tbody></table></div></section>
             <section id="stocktake-detail-panel" class="panel stocktake-detail-panel hidden"><header class="panel-heading"><div><p class="eyebrow">DETAIL OPNAME</p><h2 id="stocktake-detail-title">Stok opname</h2><p id="stocktake-detail-copy" class="muted"></p></div><div id="stocktake-actions" class="row-actions"></div></header><div class="table-scroll"><table class="stocktake-table"><thead><tr><th>Item / lot</th><th>Saldo saat mulai</th><th>Hitung fisik</th><th>Selisih</th><th>Alasan selisih</th><th>Catatan</th><th></th></tr></thead><tbody id="stocktake-lines"></tbody></table></div></section>
+          </section>
+
+          <section id="suppliers-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">MASTER PENGADAAN</p><h1>Supplier</h1><p class="muted">Kelola pemasok dan katalog item yang bisa dibeli.</p></div><span class="date-chip" id="supplier-count">Memuat supplier…</span></header>
+            <div class="procurement-layout">
+              <section class="panel"><header class="panel-heading"><div><h2 id="supplier-form-title">Tambah supplier</h2><p>Kode harus unik pada perusahaan.</p></div></header><form id="supplier-create-form" class="cashier-form"><label>Kode<input name="code" maxlength="50" pattern="[A-Za-z0-9][A-Za-z0-9_-]*" required></label><label>Nama supplier<input name="name" maxlength="160" required></label><label>Kontak<input name="contact_name" maxlength="120"></label><label>Email<input name="email" type="email" maxlength="254"></label><label>Telepon<input name="phone" maxlength="40"></label><label>Tempo pembayaran<input name="payment_terms" maxlength="120" placeholder="Contoh: 14 hari"></label><p id="supplier-form-error" class="login-error hidden" role="alert"></p><button class="primary-button" type="submit">Simpan supplier</button><button id="supplier-form-reset" class="small-button hidden" type="button">Batal edit</button></form></section>
+              <section class="panel"><header class="panel-heading"><div><h2>Daftar supplier</h2><p>Pilih supplier untuk mengelola katalog.</p></div></header><div id="supplier-list" class="procurement-list"></div></section>
+            </div>
+            <section id="supplier-catalog-panel" class="panel hidden procurement-detail"><header class="panel-heading"><div><p class="eyebrow">KATALOG PEMBELIAN</p><h2 id="supplier-catalog-title">Pilih supplier</h2><p class="muted">UOM pembelian hanya menawarkan satuan dasar dan konversi yang aktif.</p></div></header>
+              <form id="supplier-item-form" class="filter-form procurement-form"><label>Item inventori<select name="inventory_item_id" required></select></label><label>SKU supplier<input name="supplier_sku" maxlength="80"></label><label>UOM pembelian<select name="purchase_uom_id" required></select></label><label>Harga satuan (Rp)<input name="default_unit_price" type="number" min="0" step="1" required></label><label>Minimum order<input name="minimum_order_qty" type="number" min="0.000001" step="0.000001"></label><label class="check-label"><input name="is_preferred" type="checkbox"> Supplier utama</label><label class="check-label"><input name="is_active" type="checkbox" checked> Item aktif</label><button class="primary-button" type="submit">Simpan item</button></form>
+              <div class="table-scroll"><table><thead><tr><th>Item</th><th>SKU supplier</th><th>UOM beli</th><th>Harga</th><th>Minimum</th><th>Status</th><th></th></tr></thead><tbody id="supplier-items-body"></tbody></table></div>
+            </section>
+          </section>
+
+          <section id="purchase-orders-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">PESANAN PEMBELIAN</p><h1>Purchase order</h1><p class="muted">Buat PO dari item aktif di katalog supplier, lalu ikuti alur persetujuan.</p></div><span class="date-chip" id="po-count">Memuat PO…</span></header>
+            <section class="panel"><header class="panel-heading"><div><h2>Buat purchase order</h2><p>Pilih supplier dan satu atau beberapa item dari katalognya.</p></div></header><form id="po-create-form" class="filter-form procurement-form"><label>Supplier<select name="supplier_id" required></select></label><label>Target tiba<input name="expected_at" type="date"></label><label>Catatan<input name="notes" maxlength="1000"></label><div id="po-create-lines" class="procurement-lines"></div><button id="po-add-line" class="small-button" type="button">＋ Tambah item</button><button class="primary-button" type="submit">Buat PO</button></form></section>
+            <section class="panel"><header class="panel-heading"><div><h2>Daftar purchase order</h2><p>Status mengikuti persetujuan maker-checker dan penerimaan.</p></div></header><div class="table-scroll"><table><thead><tr><th>Nomor</th><th>Supplier</th><th>Status</th><th>Total</th><th>Dibuat</th><th>Aksi</th></tr></thead><tbody id="po-body"></tbody></table></div></section>
+            <section id="po-detail-panel" class="panel hidden procurement-detail"><header class="panel-heading"><div><h2 id="po-detail-title">Detail PO</h2><p id="po-detail-copy" class="muted"></p></div><div id="po-actions" class="row-actions"></div></header><div class="table-scroll"><table><thead><tr><th>Item</th><th>Jumlah PO</th><th>Sudah diterima</th><th>Sisa</th><th>Harga</th><th>Total</th></tr></thead><tbody id="po-lines"></tbody></table></div></section>
+          </section>
+
+          <section id="goods-receipts-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">BARANG MASUK KE STOK</p><h1>Penerimaan barang</h1><p class="muted">Catat jumlah diterima, barang ditolak, dan data lot sebelum masuk ke ledger.</p></div><span class="date-chip" id="gr-count">Memuat penerimaan…</span></header>
+            <section class="panel"><header class="panel-heading"><div><h2>Buat penerimaan dari PO</h2><p>PO yang sudah dikirim atau masih menerima barang dapat dipilih.</p></div></header><form id="gr-create-form" class="filter-form procurement-form"><label>Purchase order<select name="purchase_order_id" required></select></label><label>Lokasi stok<select name="stock_location_id" required></select></label><label>No. dokumen supplier<input name="supplier_document_no" maxlength="100"></label><div id="gr-lines" class="procurement-lines"><p class="muted">Pilih PO untuk memuat item dan sisa jumlah yang dapat diterima.</p></div><button class="primary-button" type="submit">Simpan penerimaan</button></form></section>
+            <section class="panel"><header class="panel-heading"><div><h2>Daftar penerimaan</h2><p>Persetujuan dan posting stok membutuhkan admin berbeda.</p></div></header><div class="table-scroll"><table><thead><tr><th>Nomor</th><th>Purchase order</th><th>Status</th><th>Jumlah diterima</th><th>Waktu</th><th>Aksi</th></tr></thead><tbody id="gr-body"></tbody></table></div></section>
+            <section id="gr-detail-panel" class="panel hidden procurement-detail"><header class="panel-heading"><div><h2 id="gr-detail-title">Detail penerimaan</h2><p id="gr-detail-copy" class="muted"></p></div><div id="gr-actions" class="row-actions"></div></header><div class="table-scroll"><table><thead><tr><th>Item</th><th>Diterima</th><th>Ditolak</th><th>Diterima bersih</th><th>Lot / expiry</th></tr></thead><tbody id="gr-lines-detail"></tbody></table></div></section>
           </section>
 
           <section id="menus-page" class="page-view hidden">

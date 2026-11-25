@@ -37,7 +37,7 @@ export async function buildApp() {
   await app.register(helmet, { global: true });
   await app.register(cors, {
     origin: config.CORS_ORIGIN.split(',').map((v) => v.trim()).filter(Boolean),
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['authorization', 'content-type', 'idempotency-key', 'if-match', 'x-request-id']
   });
   await app.register(rateLimit, { global: true, max: 150, timeWindow: '1 minute' });

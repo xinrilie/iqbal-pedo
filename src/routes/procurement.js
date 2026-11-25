@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { badRequest, notFound } from '../lib/errors.js';
 import {
-  createSupplier, updateSupplier, listSuppliers, listSupplierItems, upsertSupplierItem,
+  createSupplier, updateSupplier, listSuppliers, listSupplierItems, upsertSupplierItem, listProcurementInventoryItems,
   createPurchaseOrder, getPurchaseOrder, listPurchaseOrders, transitionPurchaseOrder,
-  createGoodsReceipt, getGoodsReceipt, listGoodsReceipts, transitionGoodsReceipt
+  createGoodsReceipt, getGoodsReceipt, listGoodsReceipts, transitionGoodsReceipt, deleteDraftGoodsReceipt
 } from '../lib/procurement-service.js';
 
 const Uuid = z.string().uuid();
@@ -84,6 +84,10 @@ function parseOrThrow(schema, value, message) {
 }
 
 export async function procurementRoutes(app) {
+  app.get('/procurement/inventory-items', { preHandler: [app.authenticate, app.requirePermission('procurement.catalog.read')] }, async (request) =>
+    listProcurementInventoryItems({ companyId: request.gcims.companyId })
+  );
+
   app.get('/procurement/suppliers', { preHandler: [app.authenticate, app.requirePermission('procurement.supplier.read')] }, async (request) => {
     const q = parseOrThrow(ListQuery, request.query, 'Parameter supplier tidak valid.');
     return listSuppliers({ companyId: request.gcims.companyId, q: q.q, includeInactive: q.includeInactive === 'true', limit: q.limit });
@@ -152,6 +156,11 @@ export async function procurementRoutes(app) {
   app.get('/procurement/goods-receipts/:receiptId', { preHandler: [app.authenticate, app.requirePermission('procurement.receipt.read')] }, async (request) => {
     if (!Uuid.safeParse(request.params.receiptId).success) throw notFound('Goods receipt tidak ditemukan.');
     return getGoodsReceipt({ companyId: request.gcims.companyId, outletId: request.gcims.outletId, receiptId: request.params.receiptId });
+  });
+
+  app.delete('/procurement/goods-receipts/:receiptId', { preHandler: [app.authenticate, app.requirePermission('procurement.receipt.create')] }, async (request) => {
+    if (!Uuid.safeParse(request.params.receiptId).success) throw notFound('Goods receipt tidak ditemukan.');
+    return deleteDraftGoodsReceipt({ companyId: request.gcims.companyId, outletId: request.gcims.outletId, receiptId: request.params.receiptId, userId: request.gcims.userId });
   });
 
   for (const [action, permission] of [['submit','procurement.receipt.submit'],['approve','procurement.receipt.approve'],['reject','procurement.receipt.approve'],['post','procurement.receipt.post']]) {

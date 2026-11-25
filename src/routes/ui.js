@@ -60,7 +60,7 @@ export async function uiRoutes(app) {
     return reply.type('application/javascript; charset=utf-8').send(await readFile(cashierStockJs));
   });
 
-  for (const route of ['/admin', '/admin/inventory', '/admin/ledger', '/admin/stocktakes', '/admin/menus', '/admin/cashiers', '/admin/sales', '/admin/shifts']) {
+  for (const route of ['/admin', '/admin/inventory', '/admin/ledger', '/admin/stocktakes', '/admin/suppliers', '/admin/purchase-orders', '/admin/goods-receipts', '/admin/menus', '/admin/cashiers', '/admin/sales', '/admin/shifts']) {
     app.get(route, async (_request, reply) => {
       reply.header('cache-control', 'no-store');
       return reply.type('text/html; charset=utf-8').send(await readFile(adminHtml));
