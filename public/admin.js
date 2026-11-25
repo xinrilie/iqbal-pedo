@@ -258,7 +258,7 @@ async function startApp(){
   $('#user-name').textContent=session.user?.full_name??'Admin';$('#user-avatar').textContent=[...(session.user?.full_name??'A')][0]?.toUpperCase()??'A';
   const now=new Date();$('#today-label').textContent=new Intl.DateTimeFormat('id-ID',{dateStyle:'medium'}).format(now);$('#today-chip').textContent=new Intl.DateTimeFormat('id-ID',{dateStyle:'full'}).format(now);
   const page=location.pathname.split('/')[2]||'dashboard';showPage(page);
-  if(page==='dashboard')await loadDashboard();else if(page==='inventory')await loadInventory();else if(page==='ledger'){setLedgerDefaults();ledgerQuery=new URLSearchParams(new FormData($('#ledger-filter')));await loadLedger();}else if(page==='menus')await loadMenus();else{await loadCashiers();if(page==='sales')await loadSales();if(page==='shifts')await loadShifts();}
+  if(page==='dashboard')await loadDashboard();else if(page==='inventory')await loadInventory();else if(page==='ledger'){setLedgerDefaults();ledgerQuery=new URLSearchParams(new FormData($('#ledger-filter')));await loadLedger();}else if(page==='stocktakes')await loadStocktakes();else if(page==='menus')await loadMenus();else{await loadCashiers();if(page==='sales')await loadSales();if(page==='shifts')await loadShifts();}
 }
 async function login(event){
   event.preventDefault();const form=new FormData(event.currentTarget);const submit=event.currentTarget.querySelector('button');submit.disabled=true;submit.textContent='Memeriksa akun…';
@@ -270,8 +270,8 @@ $('#login-form').addEventListener('submit',login);
 $('#logout-button').addEventListener('click',()=>{sessionStorage.removeItem(SESSION_KEY);location.href='/';});
 $('#inventory-search').addEventListener('input',(event)=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>loadInventory(event.target.value),250);});
 for(const selector of ['#inventory-category-filter','#inventory-location-filter','#inventory-status-filter','#inventory-expiry-filter','#inventory-sort'])$(selector).addEventListener('change',renderInventory);
-document.querySelectorAll('.admin-nav [data-page]').forEach((link)=>link.addEventListener('click',(event)=>{event.preventDefault();const page=link.dataset.page;history.pushState({},'',link.href);showPage(page);if(page==='dashboard')loadDashboard();if(page==='inventory')loadInventory($('#inventory-search').value);if(page==='ledger'){setLedgerDefaults();ledgerQuery=new URLSearchParams(new FormData($('#ledger-filter')));loadLedger();}if(page==='menus')loadMenus();if(['cashiers','sales','shifts'].includes(page))loadCashiers().then(()=>{if(page==='sales'){setDefaultDates('#sales-filter');loadSales();}if(page==='shifts'){setDefaultDates('#shift-filter');loadShifts();}});}));
-window.addEventListener('popstate',()=>{const page=location.pathname.split('/')[2]||'dashboard';showPage(page);if(page==='dashboard')loadDashboard();if(page==='inventory')loadInventory();if(page==='ledger'){setLedgerDefaults();ledgerQuery=new URLSearchParams(new FormData($('#ledger-filter')));loadLedger();}if(page==='menus')loadMenus();if(['cashiers','sales','shifts'].includes(page))loadCashiers().then(()=>{if(page==='sales')loadSales();if(page==='shifts')loadShifts();});});
+document.querySelectorAll('.admin-nav [data-page]').forEach((link)=>link.addEventListener('click',(event)=>{event.preventDefault();const page=link.dataset.page;history.pushState({},'',link.href);showPage(page);if(page==='dashboard')loadDashboard();if(page==='inventory')loadInventory($('#inventory-search').value);if(page==='ledger'){setLedgerDefaults();ledgerQuery=new URLSearchParams(new FormData($('#ledger-filter')));loadLedger();}if(page==='stocktakes')loadStocktakes();if(page==='menus')loadMenus();if(['cashiers','sales','shifts'].includes(page))loadCashiers().then(()=>{if(page==='sales'){setDefaultDates('#sales-filter');loadSales();}if(page==='shifts'){setDefaultDates('#shift-filter');loadShifts();}});}));
+window.addEventListener('popstate',()=>{const page=location.pathname.split('/')[2]||'dashboard';showPage(page);if(page==='dashboard')loadDashboard();if(page==='inventory')loadInventory();if(page==='ledger'){setLedgerDefaults();ledgerQuery=new URLSearchParams(new FormData($('#ledger-filter')));loadLedger();}if(page==='stocktakes')loadStocktakes();if(page==='menus')loadMenus();if(['cashiers','sales','shifts'].includes(page))loadCashiers().then(()=>{if(page==='sales')loadSales();if(page==='shifts')loadShifts();});});
 $('#menu-search').addEventListener('input',(event)=>renderMenuList(event.target.value));
 $('#admin-menu-list').addEventListener('click',(event)=>{const button=event.target.closest('[data-menu-select]');if(!button)return;selectedMenuId=button.dataset.menuSelect;renderMenuList($('#menu-search').value);renderMenuDetail(selectedMenuId);});
 $('#menu-detail').addEventListener('click',async(event)=>{const recipeButton=event.target.closest('[data-edit-recipe]');const deleteButton=event.target.closest('[data-delete-menu]');if(recipeButton){openRecipeEditor(recipeButton.dataset.editRecipe);return;}if(deleteButton){const selected=adminMenus.find((row)=>row.menu_id===deleteButton.dataset.deleteMenu);if(!selected||!confirm(`Hapus ${selected.menu_name} dari katalog? Menu yang sudah pernah terjual akan diarsipkan agar riwayat tetap utuh.`))return;deleteButton.disabled=true;try{const result=await request(`/admin/menus/${deleteButton.dataset.deleteMenu}`,{method:'DELETE'});showToast(result.archived?'Menu diarsipkan; riwayat transaksi tetap tersimpan.':'Menu dihapus.');await loadMenus();}catch(error){showToast(error.message,true);deleteButton.disabled=false;}}});
@@ -295,5 +295,29 @@ $('#sales-filter').addEventListener('submit',(event)=>{event.preventDefault();lo
 $('#shift-filter').addEventListener('submit',(event)=>{event.preventDefault();loadShifts();});
 $('#ledger-filter').addEventListener('submit',(event)=>{event.preventDefault();const values=new FormData(event.currentTarget);ledgerQuery=new URLSearchParams();for(const key of ['from','to','q','stock_location_id','movement_type']){const value=String(values.get(key)||'').trim();if(value)ledgerQuery.set(key,value);}loadLedger();});
 $('#ledger-more').addEventListener('click',()=>loadLedger({append:true}));
+$('#stocktake-create-form').addEventListener('submit',async(event)=>{
+  event.preventDefault();
+  const form=event.currentTarget;const button=form.querySelector('[type="submit"]');const values=new FormData(form);button.disabled=true;
+  try{const result=await request('/admin/stocktakes',{method:'POST',body:{stock_location_id:values.get('stock_location_id'),notes:values.get('notes')||null}});selectedStocktakeId=result.id;showToast(`Opname ${result.stocktake_number} dimulai.`);await loadStocktakes();}
+  catch(error){showToast(error.message,true);}
+  finally{button.disabled=false;}
+});
+$('#stocktake-body').addEventListener('click',(event)=>{const button=event.target.closest('[data-stocktake-id]');if(button)openStocktake(button.dataset.stocktakeId);});
+$('#stocktake-lines').addEventListener('click',async(event)=>{
+  const button=event.target.closest('[data-save-stocktake-line]');if(!button||!selectedStocktakeId)return;
+  const row=button.closest('[data-stocktake-line]');const body={counted_qty_base:row.querySelector('[name="counted_qty_base"]').value,reason_code:row.querySelector('[name="reason_code"]').value.trim()||null,notes:row.querySelector('[name="notes"]').value.trim()||null};
+  button.disabled=true;
+  try{const result=await request(`/admin/stocktakes/${selectedStocktakeId}/items/${row.dataset.stocktakeLine}`,{method:'PUT',body});renderStocktakeDetail(result);showToast('Hitungan disimpan.');await loadStocktakes();}
+  catch(error){showToast(error.message,true);button.disabled=false;}
+});
+$('#stocktake-actions').addEventListener('click',async(event)=>{
+  const button=event.target.closest('[data-stocktake-action]');if(!button||!selectedStocktakeId)return;
+  const action=button.dataset.stocktakeAction;
+  let body;
+  if(action==='cancel'){const reason=prompt('Alasan membatalkan stok opname:');if(reason===null)return;if(reason.trim().length<2){showToast('Alasan minimal 2 karakter.',true);return;}body={reason:reason.trim()};}
+  button.disabled=true;
+  try{const result=await request(`/admin/stocktakes/${selectedStocktakeId}/${action}`,{method:'POST',body});renderStocktakeDetail(result);showToast(action==='post'?'Selisih masuk ke ledger.':`Stok opname ${stocktakeStatusLabels[result.status]?.toLowerCase()??'diperbarui'}.`);await loadStocktakes();}
+  catch(error){showToast(error.message,true);button.disabled=false;}
+});
 setDefaultDates('#sales-filter');setDefaultDates('#shift-filter');
 startApp();

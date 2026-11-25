@@ -28,3 +28,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+.stocktake-create-form { grid-template-columns: minmax(190px,1fr) minmax(220px,1.5fr) auto; }
+.stocktake-detail-panel { margin-top: 16px; }
+.stocktake-detail-panel .panel-heading { align-items: center; }
+.stocktake-detail-panel .panel-heading h2 { margin-bottom: 5px; }
+.stocktake-table { min-width: 1080px; }
+.stocktake-table input { width: 100%; min-width: 110px; min-height: 44px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; background: #fffefa; color: var(--ink); font-size: 10px; }
+.stocktake-table td { vertical-align: middle; }
+.stocktake-count-input { max-width: 150px; }
+@media (max-width: 720px) {
+  .stocktake-create-form { grid-template-columns: 1fr; }
+  .stocktake-detail-panel .panel-heading { align-items: flex-start; flex-direction: column; }
+}
