@@ -44,10 +44,17 @@ export async function createStocktake({ companyId, outletId, stockLocationId, us
   return withTransaction(async (client) => {
     const location = await client.query(
       `SELECT id FROM gcims.stock_locations
-        WHERE company_id=$1 AND outlet_id=$2 AND id=$3 AND is_active FOR SHARE`,
+        WHERE company_id=$1 AND outlet_id=$2 AND id=$3 AND is_active FOR UPDATE`,
       [companyId, outletId, stockLocationId]
     );
     if (!location.rowCount) throw notFound('Lokasi stok tidak ditemukan atau tidak aktif.');
+    const active = await client.query(
+      `SELECT stocktake_number FROM gcims.stocktakes
+        WHERE company_id=$1 AND outlet_id=$2 AND stock_location_id=$3
+          AND status IN ('draft','counting','pending_review','approved') LIMIT 1`,
+      [companyId,outletId,stockLocationId]
+    );
+    if(active.rowCount) throw conflict('STOCKTAKE_ALREADY_OPEN',`Opname ${active.rows[0].stocktake_number} masih berjalan di lokasi ini.`);
 
     const suffix = randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase();
     const inserted = await client.query(

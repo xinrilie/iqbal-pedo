@@ -17,6 +17,7 @@ import { procurementRoutes } from './routes/procurement.js';
 import { cashierRoutes } from './routes/cashier.js';
 import { adminRoutes } from './routes/admin.js';
 import { uiRoutes } from './routes/ui.js';
+import { stocktakeRoutes } from './routes/stocktakes.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -99,6 +100,7 @@ export async function buildApp() {
   await app.register(procurementRoutes, { prefix: '/api/v1' });
   await app.register(cashierRoutes, { prefix: '/api/v1' });
   await app.register(adminRoutes, { prefix: '/api/v1' });
+  await app.register(stocktakeRoutes, { prefix: '/api/v1' });
 
   app.addHook('onClose', async () => {
     await pool.end();
