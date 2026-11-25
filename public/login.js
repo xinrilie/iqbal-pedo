@@ -1,21 +1,17 @@
 const API='/api/v1';
-const SESSION_KEY='gcims_pos_session';
+try { sessionStorage.removeItem('gcims_pos_session'); } catch {}
 const form=document.querySelector('#login-form');
 const errorBox=document.querySelector('#login-error');
 
-function readSession(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');}catch{return null;}}
 function setError(message){errorBox.textContent=message;errorBox.classList.toggle('hidden',!message);}
-async function identify(token){
-  const response=await fetch(`${API}/auth/me`,{headers:{authorization:`Bearer ${token}`}});
+async function identify(){
+  const response=await fetch(`${API}/auth/me`);
   if(!response.ok)throw new Error('Sesi tidak berlaku. Silakan masuk kembali.');
   return response.json();
 }
 function goToRole(permissions){location.replace((permissions??[]).includes('admin.dashboard.read')?'/admin':'/pos');}
 
-const existing=readSession();
-if(existing?.token){
-  identify(existing.token).then((identity)=>goToRole(identity.permissions)).catch(()=>sessionStorage.removeItem(SESSION_KEY));
-}
+identify().then((identity)=>goToRole(identity.permissions)).catch(()=>{});
 
 form.addEventListener('submit',async(event)=>{
   event.preventDefault();
@@ -28,10 +24,8 @@ form.addEventListener('submit',async(event)=>{
     const response=await fetch(`${API}/auth/login`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:String(values.get('username')).trim(),password:String(values.get('password'))})});
     const result=await response.json();
     if(!response.ok)throw new Error(result?.error?.message??'Username atau password tidak valid.');
-    const session={token:result.access_token,user:result.user,scope:result.scope};
-    sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));
-    const identity=await identify(session.token);
+    const identity=await identify();
     goToRole(identity.permissions);
-  }catch(error){sessionStorage.removeItem(SESSION_KEY);setError(error.message||'Tidak dapat masuk. Coba lagi.');}
+  }catch(error){setError(error.message||'Tidak dapat masuk. Coba lagi.');}
   finally{button.disabled=false;button.innerHTML='<span>Masuk</span><span aria-hidden="true">→</span>';}
 });

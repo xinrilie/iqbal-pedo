@@ -1,6 +1,6 @@
 const API = '/api/v1';
 const SCOPE_KEY = 'gcims_pos_preferences';
-const SESSION_KEY = 'gcims_pos_session';
+try { sessionStorage.removeItem('gcims_pos_session'); } catch {}
 const $ = (selector) => document.querySelector(selector);
 const money = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
 let stockAlertReturnFocus = null;
@@ -8,7 +8,8 @@ let paymentReturnFocus = null;
 let shiftReturnFocus = null;
 
 const state = {
-  token: null,
+  authenticated: false,
+  csrfToken: null,
   user: null,
   scope: null,
   permissions: [],
@@ -87,7 +88,7 @@ function hideShiftDialog() {
 
 async function request(path, { method = 'GET', body, headers = {}, auth = true, key } = {}) {
   const requestHeaders = { ...headers };
-  if (auth && state.token) requestHeaders.authorization = `Bearer ${state.token}`;
+  if (auth && state.csrfToken && !['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) requestHeaders['x-csrf-token'] = state.csrfToken;
   if (body !== undefined) requestHeaders['content-type'] = 'application/json';
   if (key) requestHeaders['idempotency-key'] = key;
   const response = await fetch(`${API}${path}`, {
@@ -103,7 +104,7 @@ async function request(path, { method = 'GET', body, headers = {}, auth = true, 
     error.code = data?.error?.code;
     error.details = data?.error?.details;
     error.requestId = data?.error?.request_id;
-    if (response.status === 401 && state.token) signOut('Sesi berakhir. Silakan masuk kembali.');
+    if (response.status === 401 && state.authenticated) signOut('Sesi berakhir. Silakan masuk kembali.');
     throw error;
   }
   return data;
@@ -112,15 +113,6 @@ async function request(path, { method = 'GET', body, headers = {}, auth = true, 
 function loadScope() {
   try { return JSON.parse(localStorage.getItem(SCOPE_KEY) || '{}'); }
   catch { return {}; }
-}
-
-function saveSession() {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: state.token, user: state.user, scope: state.scope }));
-}
-
-function readSession() {
-  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }
-  catch { return null; }
 }
 
 function showLogin(message = '') {
@@ -136,7 +128,8 @@ function hideLogin() {
 }
 
 function signOut(message = '') {
-  state.token = null;
+  state.authenticated = false;
+  state.csrfToken = null;
   state.user = null;
   state.scope = null;
   state.permissions = [];
@@ -153,7 +146,6 @@ function signOut(message = '') {
   state.draftDirty = false;
   state.lastReceipt = null;
   state.history = [];
-  sessionStorage.removeItem(SESSION_KEY);
   $('#payment-modal').classList.add('hidden');
   showLogin(message);
 }
@@ -179,6 +171,7 @@ async function initializeApp() {
   $('#success-view').classList.add('hidden');
   try {
     const identity = await request('/auth/me');
+    state.csrfToken = identity.csrf_token;
     state.permissions = identity.permissions ?? [];
     state.user = identity.user ?? state.user;
     state.scope = identity.scope ?? state.scope;
@@ -779,10 +772,10 @@ async function handleLogin(event) {
       method: 'POST', auth: false,
       body: { username, password: String(form.get('password')) }
     });
-    state.token = result.access_token;
+    state.authenticated = true;
+    state.csrfToken = result.csrf_token;
     state.user = result.user;
     state.scope = result.scope;
-    saveSession();
     state.cart = [];
     state.currentOrder = null;
     state.history = [];
@@ -798,8 +791,11 @@ async function handleLogin(event) {
 function initialize() {
   $('#today-label').textContent = new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date());
   $('#login-form').addEventListener('submit', handleLogin);
-  $('#logout-button').addEventListener('click', () => { signOut(); location.href = '/'; });
-  $('#shift-action').addEventListener('click', () => state.token && openShiftModal(state.shift ? 'close' : 'open'));
+  $('#logout-button').addEventListener('click', async () => {
+    try { await request('/auth/logout', { method: 'POST' }); signOut(); location.href = '/'; }
+    catch (error) { toast(`Keluar gagal: ${error.message}`, 'error'); }
+  });
+  $('#shift-action').addEventListener('click', () => state.authenticated && openShiftModal(state.shift ? 'close' : 'open'));
   $('#cash-movement-button').addEventListener('click', () => {
     if (!state.shift) return openShiftModal('open');
     openShiftModal('movement');
@@ -932,13 +928,8 @@ function initialize() {
     }
   }));
 
-  const session = readSession();
-  if (session?.token && session?.scope?.company_id && session?.scope?.outlet_id) {
-    state.token = session.token;
-    state.user = session.user;
-    state.scope = session.scope;
-    initializeApp();
-  } else showLogin();
+  state.authenticated = true;
+  initializeApp();
 }
 
 initialize();

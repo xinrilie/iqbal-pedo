@@ -23,7 +23,7 @@ Dokumen ini menetapkan kontrak komunikasi antara frontend kasir/admin/barista de
 |---|---|
 | Base path | `/api/v1` |
 | Content type | `application/json; charset=utf-8` |
-| Auth | `Authorization: Bearer <access-token>` kecuali webhook provider |
+| Auth | Cookie sesi `HttpOnly`; mutasi browser memakai header `X-CSRF-Token` kecuali webhook provider |
 | Waktu | RFC 3339/ISO-8601 dengan timezone; simpan `TIMESTAMPTZ` |
 | Uang | Integer Rupiah, contoh `76000` |
 | Kuantitas | String desimal, contoh `"150.000"` |

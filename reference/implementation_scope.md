@@ -6,12 +6,12 @@ Bagian historis di bawah menggambarkan keadaan saat pertama kali diaudit; status
 
 - **POS:** katalog café dan barang retail, keranjang, draft order, pembayaran tunai mode uji, receipt, shift kasir, dan laporan penjualan.
 - **Admin:** login dan RBAC, akun kasir/admin, menu/produk dan resep BOM, inventori dengan filter/sortir expired, ledger, stok opname maker-checker, supplier/katalog supplier, PO multi-item, dan penerimaan barang maker-checker yang memposting saldo diterima ke ledger.
-- **Database:** PostgreSQL migrations berurutan; sesi JWT bisa dicabut setelah perubahan status/password dengan migration `0012_auth_session_revocation.sql`.
+- **Database:** PostgreSQL migrations berurutan; sesi JWT bisa dicabut setelah perubahan status/password/logout dengan migration `0012_auth_session_revocation.sql`.
 - **Kitchen display:** endpoint backend sudah ada, layar operasional KDS belum dibuat.
 - **Belum siap produksi:** belum ada provider pembayaran nyata, refund, worker outbox/background jobs, invoice/hutang supplier, audit analytics, serta backup/restore dan pemulihan bencana yang terdokumentasi dan diuji.
 - **Verifikasi yang masih perlu dilakukan pada database lokal pengguna:** terapkan migration 0012, lalu smoke-test login/role revocation, buat PO, approve oleh admin lain, terima sebagian/penuh, approve dan post, serta pastikan saldo ledger. Tes Node tidak menjalankan skenario PostgreSQL tersebut.
 
-Token disimpan di `sessionStorage` untuk prototipe browser. CSP default, escaping output, dan durasi token membatasi risiko umum, tetapi aplikasi belum memakai cookie `HttpOnly` atau deployment hardening; jangan menganggap MVP ini bebas seluruh risiko keamanan.
+Browser memakai cookie sesi `HttpOnly`, `SameSite=Strict` (dan `Secure` di produksi); mutasi memerlukan token CSRF dan sesi dapat dicabut lewat logout. JWT Bearer dari build lama ditolak. Perlindungan ini mengurangi pencurian token lewat JavaScript, tetapi XSS tetap dapat menjalankan aksi selama sesi aktif; gunakan TLS, jaga CSP/escaping output, dan jangan menganggap MVP bebas seluruh risiko keamanan.
 
 ## Fakta dari sumber GCIMS
 
@@ -20,7 +20,7 @@ Enam mockup menunjukkan POS (pilih menu, keranjang, dine-in/takeaway, catatan, s
 ## Keputusan implementasi tambahan
 
 - Node.js 22+, Fastify 5, PostgreSQL, JavaScript ESM.
-- JWT bearer token dengan scope company/outlet; permission diperiksa dari tabel permission/role.
+- JWT session cookie dengan scope company/outlet; permission diperiksa dari tabel permission/role; mutasi browser dilindungi CSRF.
 - Harga disimpan sebagai integer Rupiah; kalkulasi line item dengan integer arithmetic untuk kuantitas POS 3 desimal.
 - Tarif pajak dibaca dari `system_settings` key `pos.tax_rate`, sebagai rasio desimal (mis. `0.10`). Default 0 karena angka 10% mockup bukan keputusan pajak produksi.
 - `Idempotency-Key` untuk create order/payment; request hash mencegah key dipakai ulang untuk payload berbeda.

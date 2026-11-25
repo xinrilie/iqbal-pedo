@@ -2,12 +2,13 @@ import bcrypt from 'bcryptjs';
 import { pool } from './lib/db.js';
 import { forbidden, unauthorized } from './lib/errors.js';
 import { config } from './config.js';
+import { csrfTokenMatches, extractAccessToken } from './lib/session-cookie.js';
 
 export async function registerAuth(app) {
   app.decorateRequest('gcims', null);
   app.decorate('authenticate', async function authenticate(request) {
     try {
-      await request.jwtVerify();
+      await request.jwtVerify({ onlyCookie: false, extractToken: extractAccessToken });
     } catch {
       throw unauthorized('Token akses tidak valid atau kedaluwarsa.');
     }
@@ -27,7 +28,21 @@ export async function registerAuth(app) {
     if (!Number.isSafeInteger(tokenVersion) || tokenVersion !== active.rows[0].auth_token_version) {
       throw unauthorized('Sesi sudah dicabut. Silakan masuk kembali.');
     }
-    request.gcims = { userId: sub, companyId, outletId };
+    const unsafeMethod = !['GET', 'HEAD', 'OPTIONS'].includes(request.method);
+    if (unsafeMethod) {
+      const fetchSite = request.headers['sec-fetch-site'];
+      if (fetchSite === 'cross-site') throw forbidden('Request lintas situs ditolak.');
+      const origin = request.headers.origin;
+      if (origin) {
+        const allowedOrigins = new Set(config.CORS_ORIGIN.split(',').map((value) => value.trim()));
+        if (config.NODE_ENV !== 'production') allowedOrigins.add(`${request.protocol}://${request.headers.host}`);
+        if (!allowedOrigins.has(origin)) throw forbidden('Origin request tidak diizinkan.');
+      }
+      if (!csrfTokenMatches(request.user?.csrf_token, request.headers['x-csrf-token'])) {
+        throw forbidden('Token CSRF tidak valid atau sudah kedaluwarsa.');
+      }
+    }
+    request.gcims = { userId: sub, companyId, outletId, csrfToken: request.user?.csrf_token };
   });
 
   app.decorate('requirePermission', function requirePermission(permissionCode) {

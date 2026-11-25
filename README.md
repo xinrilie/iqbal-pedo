@@ -9,9 +9,9 @@ Prototype point of sale and inventory system for a café and convenience store. 
 - **Backend:** Node.js 22+, JavaScript ES modules, Fastify 5.
 - **Frontend:** plain HTML, CSS, and browser JavaScript served by Fastify; no frontend framework or bundler.
 - **Database:** PostgreSQL 15+ using `pg` and parameterized SQL; no ORM.
-- **Validation and security:** Zod, bcrypt password hashes, JWT access tokens, role/permission checks, Helmet, CORS allowlist, and rate limits.
+- **Validation and security:** Zod, bcrypt password hashes, HttpOnly JWT session cookies with CSRF protection, role/permission checks, Helmet, CORS allowlist, and rate limits.
 
-Authentication is implemented. Login checks an active account and company/outlet membership, then returns a short-lived Bearer JWT (default 15 minutes). Protected API routes verify account and membership status and check permissions such as `pos.order.create` or `admin.inventory.read`. The browser keeps the access token in `sessionStorage`. The prototype bootstrap can create `admin` / `admin` only when connected to `db_gcims_test`; change that password before sharing the database and never use those credentials outside local testing.
+Authentication is implemented. Login checks an active account and company/outlet membership, then sets a short-lived JWT in an `HttpOnly`, `SameSite=Strict` cookie (default 15 minutes; `Secure` in production). State-changing browser requests must include a CSRF token held in memory. Protected API routes verify account, membership, session version, and permissions such as `pos.order.create` or `admin.inventory.read`. Bearer-token authentication is disabled; old tokens stored by previous builds are rejected. The prototype bootstrap can create `admin` / `admin` only when connected to `db_gcims_test`; change that password before sharing the database and never use those credentials outside local testing.
 
 The admin panel includes cashier/admin accounts, product and BOM management, inventory filters, stock ledger, stocktake approval/posting, supplier catalog, purchase orders, and goods receipt posting. Account password/status changes revoke existing JWT sessions. Procurement and stocktake approvals use maker-checker checks. The kitchen display is currently API-only; it does not yet have a dedicated staff screen.
 

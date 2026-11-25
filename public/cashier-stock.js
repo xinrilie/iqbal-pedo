@@ -1,12 +1,12 @@
-const SESSION_KEY='gcims_pos_session';
+try { sessionStorage.removeItem('gcims_pos_session'); } catch {}
 const $=(selector)=>document.querySelector(selector);
 const qtyFormat=new Intl.NumberFormat('id-ID',{maximumFractionDigits:6});
 let timer=null;
-let token=null;
+let authenticated=false;
+let csrfToken=null;
 let stockRows=[];
 function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function fmt(value){return qtyFormat.format(Number(value)||0);}
-function sessionToken(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null')?.token??null;}catch{return null;}}
 function dateLabel(value){if(!value)return '';const [year,month,day]=value.slice(0,10).split('-');return `${day}/${month}/${year}`;}
 function populateFilter(id,options,label){const select=$(id);const current=select.value||'all';select.innerHTML=`<option value="all">${label}</option>`+options.map((option)=>`<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`).join('');select.value=[...select.options].some((option)=>option.value===current)?current:'all';}
 function renderStock(){
@@ -50,9 +50,9 @@ async function loadStock(query=''){
   const body=$('#stock-body');body.innerHTML='<tr><td colspan="7" class="stock-empty">Memuat data stok…</td></tr>';
   try{
     const params=new URLSearchParams();if(query.trim())params.set('q',query.trim());
-    const response=await fetch(`/api/v1/cashier/stock${params.size?`?${params}`:''}`,{headers:{authorization:`Bearer ${token}`}});
+    const response=await fetch(`/api/v1/cashier/stock${params.size?`?${params}`:''}`);
     const data=await response.json().catch(()=>null);
-    if(response.status===401){token=null;sessionStorage.removeItem(SESSION_KEY);location.replace('/');return;}
+    if(response.status===401){authenticated=false;location.replace('/');return;}
     if(response.status===403)throw new Error('Akun ini belum memiliki izin untuk membaca katalog/stok POS.');
     if(!response.ok)throw new Error(data?.error?.message??`Gagal memuat stok (${response.status}).`);
     stockRows=data?.data??[];
@@ -64,22 +64,21 @@ async function loadStock(query=''){
   }catch(error){body.innerHTML=`<tr><td colspan="7" class="stock-empty">${escapeHtml(error.message)}</td></tr>`;$('#stock-error').textContent=error.message;$('#stock-error').classList.remove('hidden');}
 }
 async function initialize(){
-  token=sessionToken();
-  if(!token){location.replace('/');return;}
   try{
-    const response=await fetch('/api/v1/auth/me',{headers:{authorization:`Bearer ${token}`}});
+    const response=await fetch('/api/v1/auth/me');
     const identity=await response.json().catch(()=>null);
-    if(response.status===401){token=null;sessionStorage.removeItem(SESSION_KEY);location.replace('/');return;}
+    if(response.status===401){location.replace('/');return;}
     if(!response.ok)throw new Error(identity?.error?.message??'Tidak dapat memeriksa sesi kasir.');
+    csrfToken=identity.csrf_token;authenticated=true;
     if((identity.permissions??[]).includes('admin.dashboard.read')){location.replace('/admin');return;}
     const name=identity.user?.full_name??'Kasir';$('#cashier-name').textContent=name;$('#cashier-avatar').textContent=[...name.trim()][0]?.toUpperCase()??'K';
     $('#today-label').textContent=new Intl.DateTimeFormat('id-ID',{dateStyle:'medium'}).format(new Date());
-    const outletResponse=await fetch(`/api/v1/outlets/${encodeURIComponent(identity.scope.outlet_id)}/stock-locations`,{headers:{authorization:`Bearer ${token}`}});
+    const outletResponse=await fetch(`/api/v1/outlets/${encodeURIComponent(identity.scope.outlet_id)}/stock-locations`);
     if(outletResponse.ok){const outlet=await outletResponse.json();const first=outlet.data?.[0];if(first?.outlet_name)$('#outlet-name').textContent=first.outlet_name;if(first?.name)$('#outlet-location').textContent=first.name;}
     await loadStock();
   }catch(error){$('#stock-error').textContent=error.message;$('#stock-error').classList.remove('hidden');}
 }
-$('#stock-search').addEventListener('input',(event)=>{clearTimeout(timer);timer=setTimeout(()=>{if(token)loadStock(event.target.value);},250);});
+$('#stock-search').addEventListener('input',(event)=>{clearTimeout(timer);timer=setTimeout(()=>{if(authenticated)loadStock(event.target.value);},250);});
 for(const selector of ['#stock-category-filter','#stock-location-filter','#stock-expiry-filter','#stock-sort'])$(selector).addEventListener('change',renderStock);
-$('#logout-button').addEventListener('click',()=>{sessionStorage.removeItem(SESSION_KEY);location.href='/';});
+$('#logout-button').addEventListener('click',async()=>{try{const response=await fetch('/api/v1/auth/logout',{method:'POST',headers:{'x-csrf-token':csrfToken}});if(!response.ok)throw new Error('Sesi belum berhasil dicabut. Coba lagi.');location.href='/';}catch(error){$('#stock-error').textContent=error.message;$('#stock-error').classList.remove('hidden');}});
 initialize();

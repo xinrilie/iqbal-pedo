@@ -1,10 +1,13 @@
 import { z } from 'zod';
+import { randomBytes } from 'node:crypto';
 import { loginWithPassword } from '../auth.js';
-import { badRequest } from '../lib/errors.js';
+import { badRequest, forbidden } from '../lib/errors.js';
 import { pool } from '../lib/db.js';
+import { withTransaction } from '../lib/db.js';
 import { isBcryptPasswordLengthValid, toLoginCredentials } from '../lib/auth-input.js';
 import { accessTokenClaims } from '../lib/jwt-claims.js';
 import { config } from '../config.js';
+import { clearSessionCookie, serializeSessionCookie } from '../lib/session-cookie.js';
 
 const PrototypeLoginSchema = z.object({
   username: z.string().trim().min(1).max(254),
@@ -20,14 +23,40 @@ const LoginSchema = z.union([PrototypeLoginSchema, ScopedLoginSchema]);
 
 export async function authRoutes(app) {
   app.post('/auth/login', { config: { rateLimit: { max: 8, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const fetchSite = request.headers['sec-fetch-site'];
+    if (fetchSite === 'cross-site') throw forbidden('Login lintas situs ditolak.');
+    const origin = request.headers.origin;
+    if (origin) {
+      const allowedOrigins = new Set(config.CORS_ORIGIN.split(',').map((value) => value.trim()));
+      if (config.NODE_ENV !== 'production') allowedOrigins.add(`${request.protocol}://${request.headers.host}`);
+      if (!allowedOrigins.has(origin)) throw forbidden('Origin login tidak diizinkan.');
+    }
     const parsed = LoginSchema.safeParse(request.body);
     if (!parsed.success) throw badRequest('Payload login tidak valid.', parsed.error.issues);
     const user = await loginWithPassword(toLoginCredentials(parsed.data));
-    const claims = accessTokenClaims(user);
+    const csrfToken = randomBytes(32).toString('base64url');
+    const claims = accessTokenClaims(user, csrfToken);
     const token = app.jwt.sign(claims.payload, { ...claims.options, expiresIn: config.JWT_TTL });
     await pool.query('UPDATE gcims.users SET last_login_at = now() WHERE id = $1', [user.id]);
+    reply.header('set-cookie', serializeSessionCookie(token, { ttl: config.JWT_TTL, secure: config.NODE_ENV === 'production' }));
     const { company_id: companyId, outlet_id: outletId, auth_token_version: _tokenVersion, ...publicUser } = user;
-    return reply.code(200).send({ access_token: token, token_type: 'Bearer', expires_in: config.JWT_TTL, user: publicUser, scope: { company_id: companyId, outlet_id: outletId } });
+    return reply.code(200).send({ token_type: 'Cookie', expires_in: config.JWT_TTL, csrf_token: csrfToken, user: publicUser, scope: { company_id: companyId, outlet_id: outletId } });
+  });
+
+  app.post('/auth/logout', { preHandler: [app.authenticate] }, async (request, reply) => {
+    await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE gcims.users SET auth_token_version=auth_token_version+1,updated_at=now() WHERE id=$1`,
+        [request.gcims.userId]
+      );
+      await client.query(
+        `INSERT INTO gcims.audit_logs(company_id,outlet_id,actor_user_id,action,entity_type,entity_id,after_data)
+         VALUES($1,$2,$3,'auth.session.revoked','user',$3,jsonb_build_object('reason','logout'))`,
+        [request.gcims.companyId,request.gcims.outletId,request.gcims.userId]
+      );
+    });
+    reply.header('set-cookie', clearSessionCookie({ secure: config.NODE_ENV === 'production' }));
+    return { ok: true };
   });
 
   app.get('/auth/me', { preHandler: [app.authenticate] }, async (request) => {
@@ -51,7 +80,8 @@ export async function authRoutes(app) {
     return {
       user: user.rows[0],
       scope: { company_id: request.gcims.companyId, outlet_id: request.gcims.outletId },
-      permissions: permissions.rows[0].codes
+      permissions: permissions.rows[0].codes,
+      csrf_token: request.gcims.csrfToken ?? null
     };
   });
 }

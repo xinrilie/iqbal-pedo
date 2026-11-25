@@ -1,5 +1,5 @@
 const API='/api/v1';
-const SESSION_KEY='gcims_pos_session';
+try { sessionStorage.removeItem('gcims_pos_session'); } catch {}
 const $=(selector)=>document.querySelector(selector);
 const money=new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0});
 const quantity=new Intl.NumberFormat('id-ID',{maximumFractionDigits:6});
@@ -35,14 +35,13 @@ let receiptIdempotency=null;
 function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function formatMoney(value){return money.format(Number(value)||0);}
 function formatQty(value){return quantity.format(Number(value)||0);}
-function readSession(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');}catch{return null;}}
 function showLogin(message=''){ $('#login-screen').classList.remove('hidden'); $('.admin-shell').classList.add('hidden'); $('#login-error').textContent=message; $('#login-error').classList.toggle('hidden',!message); }
 function showToast(message,isError=false){const node=document.createElement('div');node.className=`toast${isError?' error':''}`;node.textContent=message;$('#toast-region').append(node);setTimeout(()=>node.remove(),4000);}
 async function request(path,{method='GET',body,auth=true,headers:extraHeaders={}}={}){
-  const headers={...extraHeaders};if(auth&&session?.token)headers.authorization=`Bearer ${session.token}`;if(body!==undefined)headers['content-type']='application/json';
+  const headers={...extraHeaders};if(auth&&session?.csrfToken&&!['GET','HEAD','OPTIONS'].includes(method.toUpperCase()))headers['x-csrf-token']=session.csrfToken;if(body!==undefined)headers['content-type']='application/json';
   const response=await fetch(`${API}${path}`,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})});
   let data=null;try{data=await response.json();}catch{}
-  if(!response.ok){const error=new Error(data?.error?.message??`Request gagal (${response.status}).`);error.status=response.status;error.requestId=data?.error?.request_id;if(response.status===401){sessionStorage.removeItem(SESSION_KEY);showLogin('Sesi berakhir. Silakan masuk kembali.');}throw error;}
+  if(!response.ok){const error=new Error(data?.error?.message??`Request gagal (${response.status}).`);error.status=response.status;error.requestId=data?.error?.request_id;if(response.status===401){session=null;showLogin('Sesi berakhir. Silakan masuk kembali.');}throw error;}
   return data;
 }
 function renderMetric(label,value,note){return `<article class="metric-card"><span class="metric-label">${escapeHtml(label)}</span><strong class="metric-value">${escapeHtml(value)}</strong><span class="metric-note">${escapeHtml(note)}</span></article>`;}
@@ -294,12 +293,12 @@ async function loadLedger({append=false}={}){
   }catch(error){if(!append)body.innerHTML=`<tr><td colspan="7" class="table-empty">${escapeHtml(error.message)}</td></tr>`;$('#error-banner').textContent=error.status===403?'Akun ini belum memiliki izin admin.inventory.read. Minta admin memberikan akses inventori.':error.message;$('#error-banner').classList.remove('hidden');}
 }
 async function startApp(){
-  session=readSession();
-  if(!session?.token){showLogin();return;}
+  session=session??{};
   try{
     const identity=await request('/auth/me');
     if(!(identity.permissions??[]).includes('admin.dashboard.read')){location.replace('/pos');return;}
     adminPermissions=identity.permissions??[];
+    session.csrfToken=identity.csrf_token;
     $('#menu-add-button').classList.toggle('hidden',!adminPermissions.includes('admin.menu.update'));
     session.user=identity.user??session.user;
   }catch(error){showLogin(error.message||'Sesi admin tidak valid. Silakan masuk kembali.');return;}
@@ -311,12 +310,12 @@ async function startApp(){
 }
 async function login(event){
   event.preventDefault();const form=new FormData(event.currentTarget);const submit=event.currentTarget.querySelector('button');submit.disabled=true;submit.textContent='Memeriksa akun…';
-  try{const result=await request('/auth/login',{method:'POST',auth:false,body:{username:String(form.get('username')).trim(),password:String(form.get('password'))}});session={token:result.access_token,user:result.user,scope:result.scope};sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));await startApp();}
+  try{const result=await request('/auth/login',{method:'POST',auth:false,body:{username:String(form.get('username')).trim(),password:String(form.get('password'))}});session={csrfToken:result.csrf_token,user:result.user,scope:result.scope};await startApp();}
   catch(error){$('#login-error').textContent=error.message;$('#login-error').classList.remove('hidden');}
   finally{submit.disabled=false;submit.innerHTML='Masuk <span>→</span>';}
 }
 $('#login-form').addEventListener('submit',login);
-$('#logout-button').addEventListener('click',()=>{sessionStorage.removeItem(SESSION_KEY);location.href='/';});
+$('#logout-button').addEventListener('click',async()=>{try{await request('/auth/logout',{method:'POST'});session=null;location.href='/';}catch(error){showToast(`Keluar gagal: ${error.message}`,true);}});
 $('#inventory-search').addEventListener('input',(event)=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>loadInventory(event.target.value),250);});
 for(const selector of ['#inventory-category-filter','#inventory-location-filter','#inventory-status-filter','#inventory-expiry-filter','#inventory-sort'])$(selector).addEventListener('change',renderInventory);
 function loadPageData(page){if(page==='dashboard')return loadDashboard();if(page==='inventory')return loadInventory();if(page==='ledger'){setLedgerDefaults();ledgerQuery=new URLSearchParams(new FormData($('#ledger-filter')));return loadLedger();}if(page==='stocktakes')return loadStocktakes();if(page==='suppliers')return loadSuppliers();if(page==='purchase-orders')return loadPurchaseOrders();if(page==='goods-receipts')return loadGoodsReceipts();if(page==='menus')return loadMenus();if(['cashiers','sales','shifts'].includes(page))return loadCashiers().then(()=>{if(page==='cashiers')return loadAdmins();if(page==='sales'){setDefaultDates('#sales-filter');return loadSales();}if(page==='shifts'){setDefaultDates('#shift-filter');return loadShifts();}});}

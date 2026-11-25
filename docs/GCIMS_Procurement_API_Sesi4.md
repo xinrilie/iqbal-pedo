@@ -2,7 +2,7 @@
 
 Base URL: `http://127.0.0.1:3000/api/v1`
 
-Semua endpoint memerlukan `Authorization: Bearer <JWT>` kecuali disebut berbeda. `company_id` dan `outlet_id` tidak diterima dari body; scope selalu diambil dari token. Semua endpoint mengikuti RBAC permission.
+Semua endpoint memakai cookie sesi `HttpOnly`; mutasi browser wajib mengirim `X-CSRF-Token`. `company_id` dan `outlet_id` tidak diterima dari body; scope selalu diambil dari sesi. Semua endpoint mengikuti RBAC permission.
 
 ## Supplier
 

@@ -14,7 +14,9 @@ test('API routes in implementation match declared core paths', async () => {
     readFile(resolve(root, 'procurement.js'), 'utf8')
   ]);
   assert.ok(auth.includes('loginWithPassword(toLoginCredentials(parsed.data))'));
-  assert.match(auth, /accessTokenClaims\(user\)/);
+  assert.match(auth, /accessTokenClaims\(user, csrfToken\)/);
+  assert.match(auth, /serializeSessionCookie\(token/);
+  assert.match(auth, /app\.post\('\/auth\/logout'/);
   for (const needle of ['/outlets/:outletId/catalog']) assert.ok(pos.includes(needle));
   for (const needle of ['/outlets/:outletId/orders', '/orders/:orderId', '/orders/:orderId/items']) assert.ok(orders.includes(needle));
   for (const needle of ['/orders/:orderId/payments', '/payments/:paymentId', '/orders/:orderId/receipt', '/webhooks/payments/:providerCode']) assert.ok(payments.includes(needle));

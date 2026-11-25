@@ -13,7 +13,7 @@ servers:
       apiHost:
         default: api.example.invalid
 security:
-  - BearerAuth: []
+  - SessionCookie: []
 tags:
   - name: POS
   - name: Orders
@@ -372,10 +372,10 @@ paths:
         '422': { $ref: '#/components/responses/Unprocessable' }
 components:
   securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: gcims_session
   parameters:
     OutletId:
       name: outletId
