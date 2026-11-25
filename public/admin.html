@@ -30,7 +30,7 @@
           <a class="nav-disabled" aria-disabled="true" title="Frontend pengadaan belum tersedia"><span>♧</span>Supplier <em>Segera</em></a>
           <a class="nav-disabled" aria-disabled="true" title="Frontend pengadaan belum tersedia"><span>▤</span>Pengadaan <em>Segera</em></a>
           <a class="nav-disabled" aria-disabled="true" title="Frontend pengadaan belum tersedia"><span>▣</span>Penerimaan <em>Segera</em></a>
-          <a class="nav-disabled" aria-disabled="true" title="Fitur stok opname belum tersedia"><span>✓</span>Stok opname <em>Segera</em></a>
+          <a href="/admin/stocktakes" data-page="stocktakes"><span>✓</span>Stok opname</a>
         </nav>
         <div class="sidebar-bottom">
           <div class="user-badge"><span id="user-avatar">A</span><span><strong id="user-name">Admin</strong><small>Administrator</small></span></div>
@@ -83,6 +83,17 @@
             <section class="panel"><div class="table-scroll"><table class="ledger-table"><thead><tr><th>Waktu</th><th>Item / SKU</th><th>Pergerakan</th><th>Jumlah</th><th>Lokasi & lot</th><th>Sumber / alasan</th><th>Dicatat oleh</th></tr></thead><tbody id="ledger-body"><tr><td colspan="7" class="table-empty">Memuat ledger…</td></tr></tbody></table></div>
               <footer class="panel-footer"><span id="ledger-footnote">Pergerakan terbaru ditampilkan terlebih dahulu.</span><button id="ledger-more" class="small-button hidden" type="button">Muat pergerakan berikutnya</button></footer>
             </section>
+          </section>
+
+          <section id="stocktakes-page" class="page-view hidden">
+            <header class="page-heading"><div><p class="eyebrow">HITUNG FISIK & PENYESUAIAN LEDGER</p><h1>Stok opname</h1><p class="muted">Hitung per lokasi, beri alasan selisih, minta persetujuan admin lain, lalu posting ke ledger.</p></div><span class="date-chip" id="stocktake-count">Memuat opname…</span></header>
+            <section class="panel report-filter"><form id="stocktake-create-form" class="filter-form stocktake-create-form">
+              <label>Lokasi stok<select name="stock_location_id" id="stocktake-location" required><option value="">Memuat lokasi…</option></select></label>
+              <label>Catatan awal<input name="notes" maxlength="1000" placeholder="Opsional"></label>
+              <button class="primary-button" type="submit">＋ Mulai opname</button>
+            </form></section>
+            <section class="panel stocktake-list-panel"><header class="panel-heading"><div><h2>Daftar opname</h2><p>Satu opname dapat berjalan pada setiap lokasi stok.</p></div></header><div class="table-scroll"><table><thead><tr><th>Nomor</th><th>Lokasi</th><th>Status</th><th>Progress hitung</th><th>Dibuat oleh</th><th>Waktu mulai</th><th></th></tr></thead><tbody id="stocktake-body"><tr><td colspan="7" class="table-empty">Memuat data…</td></tr></tbody></table></div></section>
+            <section id="stocktake-detail-panel" class="panel stocktake-detail-panel hidden"><header class="panel-heading"><div><p class="eyebrow">DETAIL OPNAME</p><h2 id="stocktake-detail-title">Stok opname</h2><p id="stocktake-detail-copy" class="muted"></p></div><div id="stocktake-actions" class="row-actions"></div></header><div class="table-scroll"><table class="stocktake-table"><thead><tr><th>Item / lot</th><th>Saldo saat mulai</th><th>Hitung fisik</th><th>Selisih</th><th>Alasan selisih</th><th>Catatan</th><th></th></tr></thead><tbody id="stocktake-lines"></tbody></table></div></section>
           </section>
 
           <section id="menus-page" class="page-view hidden">

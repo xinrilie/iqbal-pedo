@@ -80,10 +80,17 @@ export async function buildApp() {
     try {
       const result = await pool.query(
         `SELECT current_database() AS database_name,
-                to_regnamespace('gcims') IS NOT NULL AS gcims_schema_available`
+                to_regnamespace('gcims') IS NOT NULL AS gcims_schema_available,
+                EXISTS (
+                  SELECT 1 FROM information_schema.columns
+                   WHERE table_schema='gcims' AND table_name='users' AND column_name='auth_token_version'
+                ) AS auth_session_migration_available`
       );
       if (!result.rows[0].gcims_schema_available) {
         return reply.code(503).send({ status: 'not_ready', database: result.rows[0].database_name, schema: 'unavailable' });
+      }
+      if (!result.rows[0].auth_session_migration_available) {
+        return reply.code(503).send({ status: 'not_ready', database: result.rows[0].database_name, schema: 'gcims', migration: '0012_auth_session_revocation' });
       }
       return { status: 'ready', database: result.rows[0].database_name, schema: 'gcims' };
     } catch {
