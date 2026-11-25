@@ -4,6 +4,8 @@ const SESSION_KEY = 'gcims_pos_session';
 const $ = (selector) => document.querySelector(selector);
 const money = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
 let stockAlertReturnFocus = null;
+let paymentReturnFocus = null;
+let shiftReturnFocus = null;
 
 const state = {
   token: null,
@@ -53,7 +55,8 @@ function toast(message, type = '') {
 }
 
 function showStockAlert(message) {
-  stockAlertReturnFocus = document.activeElement;
+  const active = document.activeElement;
+  stockAlertReturnFocus = active?.closest('.hidden') ? $('#search-input') : active;
   $('#stock-alert-message').textContent = message;
   $('#stock-alert-modal').classList.remove('hidden');
   $('#stock-alert-confirm').focus();
@@ -63,6 +66,23 @@ function closeStockAlert() {
   $('#stock-alert-modal').classList.add('hidden');
   if (stockAlertReturnFocus?.isConnected) stockAlertReturnFocus.focus({ preventScroll: true });
   stockAlertReturnFocus = null;
+}
+
+function closePaymentDialog() {
+  $('#payment-modal').classList.add('hidden');
+  if (paymentReturnFocus?.isConnected) paymentReturnFocus.focus({ preventScroll: true });
+  paymentReturnFocus = null;
+}
+
+function closeShiftDialog() {
+  if (!state.shift) return;
+  hideShiftDialog();
+}
+
+function hideShiftDialog() {
+  $('#shift-modal').classList.add('hidden');
+  if (shiftReturnFocus?.isConnected) shiftReturnFocus.focus({ preventScroll: true });
+  shiftReturnFocus = null;
 }
 
 async function request(path, { method = 'GET', body, headers = {}, auth = true, key } = {}) {
@@ -226,6 +246,7 @@ function openShiftModal(mode) {
   $('#close-shift').classList.toggle('hidden', !state.shift);
   $('#save-shift').innerHTML = `<span>${closing ? 'Tutup shift' : movement ? 'Simpan kas' : 'Mulai shift'}</span><span>→</span>`;
   $('#shift-modal').classList.remove('hidden');
+  shiftReturnFocus = document.activeElement;
   window.setTimeout(() => $('#shift-amount').focus(), 20);
 }
 
@@ -242,7 +263,7 @@ async function saveShift(event) {
         method: 'POST', body: { closing_cash_amount: amount, closing_note: $('#shift-note').value.trim() || null }
       });
       state.shift = null;
-      $('#shift-modal').classList.add('hidden');
+      hideShiftDialog();
       toast(`Shift ditutup. Selisih kas: ${formatMoney(result.shift.variance_amount)}.`);
     } else if (state.shiftMode === 'movement') {
       const result = await request('/cashier/drawer-events', { method: 'POST', body: {
@@ -250,13 +271,13 @@ async function saveShift(event) {
         amount,
         reason: $('#shift-note').value.trim()
       } });
-      $('#shift-modal').classList.add('hidden');
+      hideShiftDialog();
       toast(`${result.event.event_type === 'cash_in' ? 'Kas masuk' : 'Kas keluar'} berhasil dicatat.`);
       await refreshShift();
     } else {
       const result = await request('/cashier/shifts', { method: 'POST', body: { opening_cash_amount: amount } });
       state.shift = result.shift;
-      $('#shift-modal').classList.add('hidden');
+      hideShiftDialog();
       await refreshShift();
       toast('Shift kasir berhasil dimulai.');
     }
@@ -549,6 +570,7 @@ function openPaymentDialog(order) {
   $('#confirm-payment').innerHTML = '<span>Konfirmasi tunai</span><span>→</span>';
   renderQuickCash(order.grand_total_amount);
   updateChange();
+  paymentReturnFocus = document.activeElement;
   $('#payment-modal').classList.remove('hidden');
   window.setTimeout(() => $('#cash-received').focus(), 20);
 }
@@ -783,8 +805,8 @@ function initialize() {
     openShiftModal('movement');
   });
   $('#shift-form').addEventListener('submit', saveShift);
-  $('#close-shift').addEventListener('click', () => { if (state.shift) $('#shift-modal').classList.add('hidden'); });
-  $('#shift-modal').addEventListener('click', (event) => { if (event.target === $('#shift-modal') && state.shift) $('#shift-modal').classList.add('hidden'); });
+  $('#close-shift').addEventListener('click', closeShiftDialog);
+  $('#shift-modal').addEventListener('click', (event) => { if (event.target === $('#shift-modal')) closeShiftDialog(); });
   $('#drawer-button').addEventListener('click', async () => {
     if (!state.shift) return openShiftModal('open');
     try {
@@ -800,7 +822,18 @@ function initialize() {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); $('#search-input').focus(); }
     if (event.key === 'Escape' && $('#cart-panel').classList.contains('open')) setCartOpen(false);
     if (event.key === 'Escape' && !$('#stock-alert-modal').classList.contains('hidden')) closeStockAlert();
-    if (event.key === 'Escape' && !state.busy && !$('#payment-modal').classList.contains('hidden')) $('#payment-modal').classList.add('hidden');
+    if (event.key === 'Escape' && !state.busy && !$('#payment-modal').classList.contains('hidden')) closePaymentDialog();
+    if (event.key === 'Escape' && !$('#shift-modal').classList.contains('hidden')) closeShiftDialog();
+    if (event.key === 'Tab') {
+      const dialog = [...document.querySelectorAll('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')].find((candidate) => !candidate.classList.contains('hidden') && getComputedStyle(candidate).visibility !== 'hidden');
+      if (!dialog) return;
+      const controls = [...dialog.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter((control) => control.getClientRects().length);
+      if (!controls.length) { event.preventDefault(); return; }
+      const first = controls[0];
+      const last = controls.at(-1);
+      if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    }
   });
   $('#category-row').addEventListener('click', (event) => {
     const button = event.target.closest('[data-category]');
@@ -875,8 +908,8 @@ function initialize() {
   $('#stock-alert-confirm').addEventListener('click', closeStockAlert);
   $('#stock-alert-modal').addEventListener('click', (event) => { if (event.target === $('#stock-alert-modal')) closeStockAlert(); });
   $('#checkout-button').addEventListener('click', () => { setCartOpen(false); beginCheckout(); });
-  $('#close-payment').addEventListener('click', () => { if (!state.busy) $('#payment-modal').classList.add('hidden'); });
-  $('#payment-modal').addEventListener('click', (event) => { if (!state.busy && event.target === $('#payment-modal')) $('#payment-modal').classList.add('hidden'); });
+  $('#close-payment').addEventListener('click', () => { if (!state.busy) closePaymentDialog(); });
+  $('#payment-modal').addEventListener('click', (event) => { if (!state.busy && event.target === $('#payment-modal')) closePaymentDialog(); });
   $('#cash-received').addEventListener('input', updateChange);
   $('#quick-cash').addEventListener('click', (event) => {
     const button = event.target.closest('[data-cash-amount]');
