@@ -3,6 +3,7 @@ import { loginWithPassword } from '../auth.js';
 import { badRequest } from '../lib/errors.js';
 import { pool } from '../lib/db.js';
 import { isBcryptPasswordLengthValid, toLoginCredentials } from '../lib/auth-input.js';
+import { accessTokenClaims } from '../lib/jwt-claims.js';
 import { config } from '../config.js';
 
 const PrototypeLoginSchema = z.object({
@@ -22,10 +23,8 @@ export async function authRoutes(app) {
     const parsed = LoginSchema.safeParse(request.body);
     if (!parsed.success) throw badRequest('Payload login tidak valid.', parsed.error.issues);
     const user = await loginWithPassword(toLoginCredentials(parsed.data));
-    const token = app.jwt.sign(
-      { company_id: user.company_id, outlet_id: user.outlet_id },
-      { sub: user.id, token_version: user.auth_token_version, expiresIn: config.JWT_TTL }
-    );
+    const claims = accessTokenClaims(user);
+    const token = app.jwt.sign(claims.payload, { ...claims.options, expiresIn: config.JWT_TTL });
     await pool.query('UPDATE gcims.users SET last_login_at = now() WHERE id = $1', [user.id]);
     const { company_id: companyId, outlet_id: outletId, auth_token_version: _tokenVersion, ...publicUser } = user;
     return reply.code(200).send({ access_token: token, token_type: 'Bearer', expires_in: config.JWT_TTL, user: publicUser, scope: { company_id: companyId, outlet_id: outletId } });

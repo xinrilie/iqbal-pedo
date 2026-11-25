@@ -32,6 +32,6 @@ form.addEventListener('submit',async(event)=>{
     sessionStorage.setItem(SESSION_KEY,JSON.stringify(session));
     const identity=await identify(session.token);
     goToRole(identity.permissions);
-  }catch(error){setError(error.message||'Tidak dapat masuk. Coba lagi.');}
+  }catch(error){sessionStorage.removeItem(SESSION_KEY);setError(error.message||'Tidak dapat masuk. Coba lagi.');}
   finally{button.disabled=false;button.innerHTML='<span>Masuk</span><span aria-hidden="true">→</span>';}
 });
