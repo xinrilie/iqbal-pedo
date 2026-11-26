@@ -409,6 +409,9 @@ h1, h2, h3, p { margin-top: 0; }
 .shift-drafts li small, .draft-in-progress, .draft-panel-clear, .draft-warning { color: var(--muted); font-size: 8px; }
 .unsaved-cart-warning { border-top: 0; padding-top: 0; color: var(--red); font-size: 9px; }
 .draft-warning { margin: 0; color: var(--red); }
+@media (max-width: 900px) {
+  .cart-panel { position: fixed; min-height: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
