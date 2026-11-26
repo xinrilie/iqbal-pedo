@@ -56,6 +56,12 @@ export async function buildApp() {
       });
     }
     if (error?.statusCode === 429) {
+      request.log.warn({
+        security_event: 'http.rate_limited',
+        method: request.method,
+        route: request.routeOptions?.url ?? 'unknown',
+        remote_address: request.ip
+      }, 'Request rate limit reached');
       return reply.code(429).send({ error: { code: 'RATE_LIMITED', message: 'Terlalu banyak request. Coba lagi beberapa saat.', request_id: request.id, details: [] } });
     }
     if (error?.validation) {
@@ -69,14 +75,14 @@ export async function buildApp() {
     if (error?.code === '23503' || error?.code === '23514') {
       return reply.code(422).send({ error: { code: 'DATA_INTEGRITY_VIOLATION', message: 'Operasi melanggar aturan integritas data.', request_id: request.id, details: [] } });
     }
-    request.log.error({ err: error }, 'Unhandled request error');
+    request.log.error({ security_event: 'http.unhandled_error', err: error }, 'Unhandled request error');
     return reply.code(500).send({
       error: { code: 'INTERNAL_ERROR', message: 'Terjadi kesalahan internal.', request_id: request.id, details: [] }
     });
   });
 
   app.get('/health/live', async () => ({ status: 'ok', service: 'gcims-backend' }));
-  app.get('/health/ready', async (_request, reply) => {
+  app.get('/health/ready', async (request, reply) => {
     try {
       const result = await pool.query(
         `SELECT current_database() AS database_name,
@@ -87,13 +93,16 @@ export async function buildApp() {
                 ) AS auth_session_migration_available`
       );
       if (!result.rows[0].gcims_schema_available) {
+        request.log.error({ security_event: 'health.schema_unavailable', database: result.rows[0].database_name }, 'Readiness check failed: GCIMS schema is unavailable');
         return reply.code(503).send({ status: 'not_ready', database: result.rows[0].database_name, schema: 'unavailable' });
       }
       if (!result.rows[0].auth_session_migration_available) {
+        request.log.error({ security_event: 'health.migration_unavailable', database: result.rows[0].database_name, migration: '0012_auth_session_revocation' }, 'Readiness check failed: required auth migration is unavailable');
         return reply.code(503).send({ status: 'not_ready', database: result.rows[0].database_name, schema: 'gcims', migration: '0012_auth_session_revocation' });
       }
       return { status: 'ready', database: result.rows[0].database_name, schema: 'gcims' };
-    } catch {
+    } catch (error) {
+      request.log.error({ security_event: 'health.database_unavailable', error_code: error.code ?? 'UNKNOWN' }, 'Readiness check failed: database query was unsuccessful');
       return reply.code(503).send({ status: 'not_ready', database: 'unavailable' });
     }
   });

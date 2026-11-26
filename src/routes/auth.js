@@ -24,16 +24,31 @@ const LoginSchema = z.union([PrototypeLoginSchema, ScopedLoginSchema]);
 export async function authRoutes(app) {
   app.post('/auth/login', { config: { rateLimit: { max: 8, timeWindow: '1 minute' } } }, async (request, reply) => {
     const fetchSite = request.headers['sec-fetch-site'];
-    if (fetchSite === 'cross-site') throw forbidden('Login lintas situs ditolak.');
+    if (fetchSite === 'cross-site') {
+      request.log.warn({ security_event: 'auth.login.blocked', reason: 'cross_site', remote_address: request.ip }, 'Cross-site login request blocked');
+      throw forbidden('Login lintas situs ditolak.');
+    }
     const origin = request.headers.origin;
     if (origin) {
       const allowedOrigins = new Set(config.CORS_ORIGIN.split(',').map((value) => value.trim()));
       if (config.NODE_ENV !== 'production') allowedOrigins.add(`${request.protocol}://${request.headers.host}`);
-      if (!allowedOrigins.has(origin)) throw forbidden('Origin login tidak diizinkan.');
+      if (!allowedOrigins.has(origin)) {
+        request.log.warn({ security_event: 'auth.login.blocked', reason: 'origin_rejected', remote_address: request.ip }, 'Login request from an untrusted origin blocked');
+        throw forbidden('Origin login tidak diizinkan.');
+      }
     }
     const parsed = LoginSchema.safeParse(request.body);
     if (!parsed.success) throw badRequest('Payload login tidak valid.', parsed.error.issues);
-    const user = await loginWithPassword(toLoginCredentials(parsed.data));
+    let user;
+    try {
+      user = await loginWithPassword(toLoginCredentials(parsed.data));
+    } catch (error) {
+      if (error.statusCode === 401) {
+        request.log.warn({ security_event: 'auth.login.failed', reason: 'invalid_credentials', remote_address: request.ip }, 'Login failed');
+      }
+      throw error;
+    }
+    request.log.info({ security_event: 'auth.login.succeeded', actor_user_id: user.id, remote_address: request.ip }, 'Login succeeded');
     const csrfToken = randomBytes(32).toString('base64url');
     const claims = accessTokenClaims(user, csrfToken);
     const token = app.jwt.sign(claims.payload, { ...claims.options, expiresIn: config.JWT_TTL });
