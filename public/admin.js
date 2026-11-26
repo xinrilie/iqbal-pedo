@@ -56,7 +56,7 @@ function renderDashboard(data){
   $('#metric-grid').innerHTML=[
     renderMetric('Penjualan hari ini',formatMoney(data.gross_sales_amount),'Dari pembayaran sukses'),
     renderMetric('Transaksi selesai',data.completed_transactions,'Pesanan lunas hari ini'),
-    renderMetric('Bahan di bawah minimum',`${data.low_stock_items} item`,data.low_stock_items?'Perlu ditinjau':'Tidak ada item kritis'),
+    renderMetric('Item di bawah minimum',`${data.low_stock_items} item`,data.low_stock_items?'Perlu ditinjau':'Tidak ada item kritis'),
     renderMetric('Lokasi stok aktif',data.active_stock_locations,'Gudang, bar, atau area penyimpanan')
   ].join('');
   const rows=data.low_stock_list??[];

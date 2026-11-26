@@ -46,13 +46,13 @@
             <header class="page-heading"><div><p class="eyebrow">RUANG OPERASIONAL</p><h1 id="welcome-title">Ringkasan operasional</h1><p class="muted" id="dashboard-subtitle">Memuat data outlet…</p></div><span class="date-chip" id="today-chip"></span></header>
             <div class="metric-grid" id="metric-grid"><article class="metric-card skeleton"></article><article class="metric-card skeleton"></article><article class="metric-card skeleton"></article><article class="metric-card skeleton"></article></div>
             <section class="panel low-stock-panel"><header class="panel-heading"><div><h2>Perhatian stok</h2><p>Bahan di bawah batas minimum dari saldo ledger.</p></div><a href="/admin/inventory" class="text-link">Buka inventori →</a></header>
-              <div class="table-scroll"><table><thead><tr><th>Bahan / SKU</th><th>Saldo</th><th>Batas minimum</th><th>Status</th></tr></thead><tbody id="low-stock-body"><tr><td colspan="4" class="table-empty">Memuat…</td></tr></tbody></table></div>
+              <div class="table-scroll"><table><thead><tr><th>Item / SKU</th><th>Saldo</th><th>Batas minimum</th><th>Status</th></tr></thead><tbody id="low-stock-body"><tr><td colspan="4" class="table-empty">Memuat…</td></tr></tbody></table></div>
             </section>
             <p class="data-note">Ringkasan memakai data transaksi dan pergerakan stok yang tercatat di database. Modul ini belum membuat atau mengubah data master.</p>
           </section>
 
           <section id="inventory-page" class="page-view hidden">
-            <header class="page-heading"><div><p class="eyebrow">MASTER ITEM & SALDO LEDGER</p><h1>Inventori bahan</h1><p class="muted">Saldo dihitung dari ledger pada seluruh lokasi stok outlet.</p></div><span class="date-chip" id="inventory-count">Memuat item…</span></header>
+            <header class="page-heading"><div><p class="eyebrow">MASTER ITEM & SALDO LEDGER</p><h1>Inventori bahan & barang</h1><p class="muted">Saldo dihitung dari ledger di semua lokasi stok outlet.</p></div><span class="date-chip" id="inventory-count">Memuat item…</span></header>
             <div class="notice"><span>✓</span><div><strong>Saldo tidak diedit langsung</strong><p>Barang masuk, konsumsi POS, dan koreksi harus dicatat sebagai pergerakan stok agar riwayat tetap terlacak.</p></div></div>
             <section class="panel inventory-panel">
               <div class="inventory-toolbar inventory-toolbar-filtered">
@@ -66,7 +66,7 @@
                 </div>
                 <span id="location-summary" class="muted"></span>
               </div>
-              <div class="table-scroll"><table><thead><tr><th>Item / SKU</th><th>Kategori</th><th>UOM dasar</th><th>Saldo fisik</th><th>Minimum</th><th>Lokasi stok</th><th>Expired terdekat</th><th>Status</th></tr></thead><tbody id="inventory-body"><tr><td colspan="8" class="table-empty">Memuat inventori…</td></tr></tbody></table></div>
+              <div class="table-scroll"><table><thead><tr><th>Item / SKU</th><th>Kategori</th><th>UOM dasar</th><th>Saldo saat ini</th><th>Batas minimum</th><th>Lokasi stok</th><th>Expired terdekat</th><th>Status</th></tr></thead><tbody id="inventory-body"><tr><td colspan="8" class="table-empty">Memuat inventori…</td></tr></tbody></table></div>
               <footer class="panel-footer"><span id="inventory-footnote"></span><span>Maksimal 300 item</span></footer>
             </section>
           </section>

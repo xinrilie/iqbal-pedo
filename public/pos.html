@@ -45,7 +45,7 @@
         <main class="workspace">
           <section class="workspace-heading">
             <div><p class="eyebrow">KASIR · PESANAN BARU</p><h1>Semua kebutuhan, satu kasir.</h1><p class="subheading" id="welcome-line">Kafe, camilan, alat tulis, dan kebutuhan harian dalam satu keranjang.</p></div>
-            <div class="drawer-actions"><button class="outline-button" id="cash-movement-button" type="button"><span aria-hidden="true">↕</span>Kas masuk/keluar</button><button class="outline-button drawer-button" id="drawer-button" type="button"><span aria-hidden="true">▣</span>Buka laci</button></div>
+            <div class="drawer-actions"><button class="outline-button" id="cash-movement-button" type="button"><span aria-hidden="true">↕</span>Kas masuk/keluar</button><button class="outline-button drawer-button" id="drawer-button" type="button"><span aria-hidden="true">▣</span>Buka laci</button><button id="cart-launcher" class="cart-launcher hidden" type="button" aria-label="Buka keranjang"><span class="cart-launcher-icon" aria-hidden="true">▣</span><span class="cart-launcher-copy"><strong>Keranjang</strong><small id="floating-cart-count">0 item</small></span><span class="cart-launcher-amount"><small>Subtotal</small><strong id="floating-cart-total">Rp0</strong></span><span class="cart-launcher-arrow" aria-hidden="true">→</span></button></div>
           </section>
 
           <section class="pos-layout" id="pos-layout">
@@ -83,12 +83,6 @@
     </div>
 
     <button id="cart-backdrop" class="cart-backdrop hidden" type="button" aria-label="Tutup keranjang"></button>
-    <button id="cart-launcher" class="cart-launcher hidden" type="button" aria-label="Buka keranjang">
-      <span class="cart-launcher-icon" aria-hidden="true">▣</span>
-      <span class="cart-launcher-copy"><strong>Keranjang</strong><small id="floating-cart-count">0 item</small></span>
-      <span class="cart-launcher-amount"><small>Subtotal</small><strong id="floating-cart-total">Rp0</strong></span><span class="cart-launcher-arrow" aria-hidden="true">→</span>
-    </button>
-
     <div id="stock-alert-modal" class="stock-alert-backdrop hidden" role="presentation">
       <section class="stock-alert-dialog" role="alertdialog" aria-modal="true" aria-labelledby="stock-alert-title" aria-describedby="stock-alert-message">
         <button id="stock-alert-close" class="stock-alert-close" type="button" aria-label="Tutup peringatan">×</button>

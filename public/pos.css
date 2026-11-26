@@ -477,3 +477,26 @@ select:focus-visible, a:focus-visible { outline: 3px solid #6f321e; outline-offs
   .cart-launcher { bottom: calc(73px + env(safe-area-inset-bottom)); }
   .toast-region { bottom: calc(20px + env(safe-area-inset-bottom)); }
 }
+
+/* Keep product names readable and keep the cart action out of the catalog grid. */
+.menu-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.product-art { height: 148px; }
+.menu-card-title { min-width: 0; padding-right: 0; }
+.menu-card-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drawer-actions .cart-launcher { position: static; min-width: 220px; min-height: 44px; padding: 5px 10px; border: 0; border-radius: 8px; box-shadow: none; transition: background .16s ease, transform .16s ease; }
+.drawer-actions .cart-launcher-icon { width: 32px; height: 32px; flex-basis: 32px; border-radius: 7px; }
+.drawer-actions .cart-launcher-copy strong { font-size: 11px; }
+.drawer-actions .cart-launcher-amount strong { font-size: 12px; }
+.drawer-actions .cart-launcher:hover { box-shadow: none; }
+@media (max-width: 620px) {
+  .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .product-art { height: clamp(105px, 34vw, 145px); }
+  .drawer-actions .cart-launcher { min-width: min(100%, 240px); }
+  .menu-card-title { gap: 4px; }
+  .product-type-tag { padding-inline: 5px; font-size: 8px; }
+  .menu-card-bottom { display: grid; grid-template-columns: minmax(0, 1fr) 44px; grid-template-rows: auto auto; gap: 4px 6px; }
+  .menu-price { grid-column: 1; grid-row: 1; }
+  .test-price-pill { grid-column: 1; grid-row: 2; justify-self: start; }
+  .add-button { grid-column: 2; grid-row: 1 / span 2; align-self: center; width: 44px; height: 44px; }
+  .menu-card-bottom > .unavailable-tag { grid-column: 2; grid-row: 1 / span 2; max-width: 100%; align-self: center; text-align: center; white-space: normal; }
+}

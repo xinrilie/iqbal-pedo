@@ -86,3 +86,24 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .admin-nav a, .primary-button, .small-button { min-height: 44px; }
 .toast { font-size: 12px; line-height: 1.5; }
 .table-empty { font-size: 12px; }
+
+@media (min-width: 721px) {
+  .admin-sidebar { overflow: hidden; }
+  .admin-brand, .outlet-card, .sidebar-bottom { flex: 0 0 auto; }
+  .admin-nav { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; scrollbar-width: thin; scrollbar-color: #d2c4b2 transparent; }
+}
+
+.inventory-filters label { gap: 6px; font-size: 11px; }
+
+@media (max-width: 720px) {
+  .low-stock-panel table { min-width: 0; }
+  .low-stock-panel thead { display: none; }
+  .low-stock-panel tbody tr:not(:has(.table-empty)) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 14px; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .low-stock-panel tbody td { padding: 0; border: 0; font-size: 11px; }
+  .low-stock-panel tbody td:first-child, .low-stock-panel tbody td:last-child { grid-column: 1 / -1; }
+  .low-stock-panel tbody td:nth-child(2)::before, .low-stock-panel tbody td:nth-child(3)::before { display: block; margin-bottom: 3px; color: var(--muted); font-size: 10px; }
+  .low-stock-panel tbody td:nth-child(2)::before { content: 'Saldo'; }
+  .low-stock-panel tbody td:nth-child(3)::before { content: 'Batas minimum'; }
+  .low-stock-panel tbody tr:has(.table-empty) { display: block; }
+  .low-stock-panel .table-empty { display: block; padding: 20px 14px; }
+}
