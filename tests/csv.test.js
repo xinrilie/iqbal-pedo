@@ -9,6 +9,7 @@ test('stock ledger CSV keeps decimal quantities and escapes spreadsheet formulas
     item_name: 'Kopi, Arabika',
     movement_type: 'sale_consumption',
     quantity_delta_base: '-1.250000',
+    balance_after_base: '8.750000',
     base_uom_code: 'g',
     stock_location_name: 'Gudang "Utama"',
     lot_code: null,
@@ -21,7 +22,7 @@ test('stock ledger CSV keeps decimal quantities and escapes spreadsheet formulas
 
   assert.ok(csv.startsWith('\uFEFF"Waktu (UTC)"'));
   assert.ok(csv.includes(`"'=HYPERLINK(""https://example.com"")"`));
-  assert.ok(csv.includes(',"-1,25","g",'));
+  assert.ok(csv.includes(',"-1,25","8,75","g",'));
   assert.ok(csv.includes('"Gudang ""Utama"""'));
   assert.ok(csv.includes(`"'+cmd"`));
   assert.ok(csv.endsWith('\r\n'));

@@ -14,7 +14,8 @@ function csvQuantity(value) {
   if (!/^-?\d+(?:\.\d+)?$/.test(text)) return csvText(text);
   const [whole, fraction = ''] = text.split('.');
   const normalizedFraction = fraction.replace(/0+$/, '');
-  return csvText(normalizedFraction ? `${whole},${normalizedFraction}` : whole);
+  // Quote validated decimal numbers directly so negative values are not mangled as formulas.
+  return `"${normalizedFraction ? `${whole},${normalizedFraction}` : whole}"`;
 }
 
 export function stockLedgerCsv(rows) {
