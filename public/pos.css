@@ -417,6 +417,15 @@ h1, h2, h3, p { margin-top: 0; }
 }
 
 /* Readable controls and a labelled tablet navigation. */
+button:focus-visible, input:focus-visible, textarea:focus-visible,
+select:focus-visible, a:focus-visible { outline: 3px solid #6f321e; outline-offset: 2px; }
+.search-box:focus-within { outline: 3px solid #6f321e; outline-offset: 2px; }
+.brand-copy small, .outlet-label, .nav-caption, .breadcrumbs span,
+.breadcrumbs b, .search-box input::placeholder, .search-box kbd,
+.category-chip:not(.selected), .section-title > span, .catalog-note,
+.type-button, .empty-cart, .remove-line, .cart-footnote,
+.login-version { color: var(--muted); }
+.unavailable-tag { color: #76551f; }
 .nav-link { min-height: 44px; }
 .outline-button, .shift-pill, .type-button, .location-field select,
 .table-field input, .note-field textarea, .quantity-control button,

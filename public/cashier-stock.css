@@ -8,6 +8,9 @@
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 .stock-filters label, .stock-filters select { font-size: 12px; }
+.stock-table th { color: var(--muted); }
+.stock-notice p { color: var(--olive); }
+.expiry-status.expired { color: #76551f; }
 .stock-table th { font-size: 10px; }
 .stock-table td, .stock-table td strong { font-size: 12px; }
 .stock-table td small, .stock-status, .expiry-status { font-size: 10px; }
