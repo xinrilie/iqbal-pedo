@@ -44,7 +44,7 @@ async function request(path,{method='GET',body,auth=true,headers:extraHeaders={}
   try{response=await fetch(`${API}${path}`,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})});}
   catch(error){if(error instanceof TypeError)throw new Error('Tidak dapat terhubung ke server. Pastikan backend aktif, lalu coba lagi.');throw error;}
   let data=null;try{data=await response.json();}catch{}
-  if(!response.ok){const error=new Error(data?.error?.message??`Request gagal (${response.status}).`);error.status=response.status;error.requestId=data?.error?.request_id;if(response.status===401){session=null;showLogin('Sesi berakhir. Silakan masuk kembali.');}throw error;}
+  if(!response.ok){const error=new Error(data?.error?.message??`Request gagal (${response.status}).`);error.status=response.status;error.requestId=data?.error?.request_id;if(response.status===401){const hadSession=Boolean(session?.csrfToken);session=null;showLogin(hadSession?'Sesi berakhir. Silakan masuk kembali.':'');}throw error;}
   return data;
 }
 function renderMetric(label,value,note){return `<article class="metric-card"><span class="metric-label">${escapeHtml(label)}</span><strong class="metric-value">${escapeHtml(value)}</strong><span class="metric-note">${escapeHtml(note)}</span></article>`;}
@@ -343,7 +343,7 @@ async function startApp(){
     session.csrfToken=identity.csrf_token;
     $('#menu-add-button').classList.toggle('hidden',!adminPermissions.includes('admin.menu.update'));
     session.user=identity.user??session.user;
-  }catch(error){showLogin(error.message||'Sesi admin tidak valid. Silakan masuk kembali.');return;}
+  }catch(error){if(error.status!==401)showLogin(error.message||'Sesi admin tidak valid. Silakan masuk kembali.');return;}
   $('#login-screen').classList.add('hidden');$('.admin-shell').classList.remove('hidden');
   $('#user-name').textContent=session.user?.full_name??'Admin';$('#user-avatar').textContent=[...(session.user?.full_name??'A')][0]?.toUpperCase()??'A';
   const now=new Date();$('#today-label').textContent=new Intl.DateTimeFormat('id-ID',{dateStyle:'medium'}).format(now);$('#today-chip').textContent=new Intl.DateTimeFormat('id-ID',{dateStyle:'full'}).format(now);

@@ -111,7 +111,10 @@ async function request(path, { method = 'GET', body, headers = {}, auth = true, 
     error.code = data?.error?.code;
     error.details = data?.error?.details;
     error.requestId = data?.error?.request_id;
-    if (response.status === 401 && state.authenticated) signOut('Sesi berakhir. Silakan masuk kembali.');
+    if (response.status === 401 && state.authenticated) {
+      error.sessionEnded = true;
+      signOut('Sesi berakhir. Silakan masuk kembali.');
+    }
     throw error;
   }
   return data;
@@ -213,7 +216,10 @@ async function initializeApp() {
     }
     if (!state.shift && initialView !== 'history') openShiftModal('open');
   } catch (error) {
-    if (error.status === 401) return;
+    if (error.status === 401) {
+      if (!error.sessionEnded) showLogin();
+      return;
+    }
     toast(error.message || 'Katalog tidak dapat dimuat.', 'error');
     $('#catalog-count').textContent = 'Tidak dapat memuat katalog';
     $('#menu-grid').innerHTML = `<div class="catalog-empty"><strong>Katalog belum tersedia</strong><span>${escapeHtml(error.message)}</span></div>`;
@@ -1173,7 +1179,6 @@ function initialize() {
     }
   }));
 
-  state.authenticated = true;
   initializeApp();
 }
 
