@@ -17,7 +17,7 @@
     "db:restore": "node scripts/restore-db.js"
   },
   "dependencies": {
-    "@fastify/cors": "^10.0.2",
+    "@fastify/cors": "^11.4.3",
     "@fastify/helmet": "^13.2.0",
     "@fastify/jwt": "10.2.7",
     "@fastify/rate-limit": "^10.2.1",
