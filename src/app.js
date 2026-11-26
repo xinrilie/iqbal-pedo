@@ -18,6 +18,7 @@ import { cashierRoutes } from './routes/cashier.js';
 import { adminRoutes } from './routes/admin.js';
 import { uiRoutes } from './routes/ui.js';
 import { stocktakeRoutes } from './routes/stocktakes.js';
+import { alertSecurityEvent } from './lib/alerting.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -62,6 +63,7 @@ export async function buildApp() {
         route: request.routeOptions?.url ?? 'unknown',
         remote_address: request.ip
       }, 'Request rate limit reached');
+      alertSecurityEvent(request, 'http.rate_limited', { method: request.method, route: request.routeOptions?.url ?? 'unknown' });
       return reply.code(429).send({ error: { code: 'RATE_LIMITED', message: 'Terlalu banyak request. Coba lagi beberapa saat.', request_id: request.id, details: [] } });
     }
     if (error?.validation) {
@@ -94,15 +96,18 @@ export async function buildApp() {
       );
       if (!result.rows[0].gcims_schema_available) {
         request.log.error({ security_event: 'health.schema_unavailable', database: result.rows[0].database_name }, 'Readiness check failed: GCIMS schema is unavailable');
+        alertSecurityEvent(request, 'health.schema_unavailable', { database: result.rows[0].database_name });
         return reply.code(503).send({ status: 'not_ready', database: result.rows[0].database_name, schema: 'unavailable' });
       }
       if (!result.rows[0].auth_session_migration_available) {
         request.log.error({ security_event: 'health.migration_unavailable', database: result.rows[0].database_name, migration: '0012_auth_session_revocation' }, 'Readiness check failed: required auth migration is unavailable');
+        alertSecurityEvent(request, 'health.migration_unavailable', { database: result.rows[0].database_name, migration: '0012_auth_session_revocation' });
         return reply.code(503).send({ status: 'not_ready', database: result.rows[0].database_name, schema: 'gcims', migration: '0012_auth_session_revocation' });
       }
       return { status: 'ready', database: result.rows[0].database_name, schema: 'gcims' };
     } catch (error) {
       request.log.error({ security_event: 'health.database_unavailable', error_code: error.code ?? 'UNKNOWN' }, 'Readiness check failed: database query was unsuccessful');
+      alertSecurityEvent(request, 'health.database_unavailable', { error_code: error.code ?? 'UNKNOWN' });
       return reply.code(503).send({ status: 'not_ready', database: 'unavailable' });
     }
   });

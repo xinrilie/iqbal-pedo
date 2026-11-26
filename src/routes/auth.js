@@ -8,6 +8,7 @@ import { isBcryptPasswordLengthValid, toLoginCredentials } from '../lib/auth-inp
 import { accessTokenClaims } from '../lib/jwt-claims.js';
 import { config } from '../config.js';
 import { clearSessionCookie, serializeSessionCookie } from '../lib/session-cookie.js';
+import { alertSecurityEvent } from '../lib/alerting.js';
 
 const PrototypeLoginSchema = z.object({
   username: z.string().trim().min(1).max(254),
@@ -45,6 +46,7 @@ export async function authRoutes(app) {
     } catch (error) {
       if (error.statusCode === 401) {
         request.log.warn({ security_event: 'auth.login.failed', reason: 'invalid_credentials', remote_address: request.ip }, 'Login failed');
+        alertSecurityEvent(request, 'auth.login.failed');
       }
       throw error;
     }

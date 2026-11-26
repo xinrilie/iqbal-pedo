@@ -14,7 +14,12 @@ const EnvSchema = z.object({
   GCIMS_DEFAULT_COMPANY_CODE: z.string().default('GOURMET-COFFEE'),
   GCIMS_DEFAULT_OUTLET_CODE: z.string().default('MAIN'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  GCIMS_ALERT_WEBHOOK_URL: z.union([z.literal(''), z.string().url()]).default(''),
   LOG_LEVEL: z.string().default('info')
+}).superRefine((values, context) => {
+  if (values.NODE_ENV === 'production' && values.GCIMS_ALERT_WEBHOOK_URL && new URL(values.GCIMS_ALERT_WEBHOOK_URL).protocol !== 'https:') {
+    context.addIssue({ code: 'custom', path: ['GCIMS_ALERT_WEBHOOK_URL'], message: 'Webhook alert produksi harus memakai HTTPS.' });
+  }
 });
 
 const parsed = EnvSchema.safeParse(process.env);
