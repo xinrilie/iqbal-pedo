@@ -58,3 +58,4 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .stocktake-create-form { grid-template-columns: 1fr; }
   .stocktake-detail-panel .panel-heading { align-items: flex-start; flex-direction: column; }
 }
+.shift-note-cell{min-width:180px;max-width:300px;white-space:normal;line-height:1.45;color:var(--muted)}

@@ -72,7 +72,7 @@
           </section>
 
           <section id="ledger-page" class="page-view hidden">
-            <header class="page-heading"><div><p class="eyebrow">RIWAYAT PERGERAKAN STOK</p><h1>Ledger stok</h1><p class="muted">Catatan append-only untuk barang masuk, pemakaian POS, waste, dan koreksi stok.</p></div><span class="date-chip" id="ledger-count">Memuat…</span></header>
+            <header class="page-heading"><div><p class="eyebrow">RIWAYAT PERGERAKAN STOK</p><h1>Ledger stok</h1><p class="muted">Catatan append-only untuk barang masuk, pemakaian POS, waste, dan koreksi stok.</p></div><div class="page-heading-actions"><span class="date-chip" id="ledger-count">Memuat…</span><button class="small-button" id="ledger-export" type="button">Unduh CSV</button></div></header>
             <section class="panel report-filter"><form id="ledger-filter" class="filter-form ledger-filter">
               <label>Dari<input name="from" type="date"></label><label>Sampai<input name="to" type="date"></label>
               <label>Item / SKU / lot<input name="q" type="search" maxlength="120" placeholder="Cari item, SKU, lot…"></label>
@@ -80,7 +80,7 @@
               <label>Tipe pergerakan<select name="movement_type"><option value="">Semua tipe</option><option value="opening_balance">Saldo awal</option><option value="goods_receipt">Barang masuk</option><option value="sale_consumption">Konsumsi POS</option><option value="waste">Waste</option><option value="adjustment_in">Koreksi masuk</option><option value="adjustment_out">Koreksi keluar</option><option value="transfer_in">Transfer masuk</option><option value="transfer_out">Transfer keluar</option><option value="return_to_stock">Retur ke stok</option><option value="stocktake_in">Opname masuk</option><option value="stocktake_out">Opname keluar</option></select></label>
               <button class="primary-button" type="submit">Terapkan filter</button>
             </form></section>
-            <section class="panel"><div class="table-scroll"><table class="ledger-table"><thead><tr><th>Waktu</th><th>Item / SKU</th><th>Pergerakan</th><th>Jumlah</th><th>Lokasi & lot</th><th>Sumber / alasan</th><th>Dicatat oleh</th></tr></thead><tbody id="ledger-body"><tr><td colspan="7" class="table-empty">Memuat ledger…</td></tr></tbody></table></div>
+            <section class="panel"><div class="table-scroll"><table class="ledger-table"><thead><tr><th>Waktu</th><th>Item / SKU</th><th>Pergerakan</th><th>Jumlah</th><th>Saldo setelah</th><th>Lokasi & lot</th><th>Sumber / alasan</th><th>Dicatat oleh</th></tr></thead><tbody id="ledger-body"><tr><td colspan="8" class="table-empty">Memuat ledger…</td></tr></tbody></table></div>
               <footer class="panel-footer"><span id="ledger-footnote">Pergerakan terbaru ditampilkan terlebih dahulu.</span><button id="ledger-more" class="small-button hidden" type="button">Muat pergerakan berikutnya</button></footer>
             </section>
           </section>
@@ -147,17 +147,17 @@
           </section>
 
           <section id="sales-page" class="page-view hidden">
-            <header class="page-heading"><div><p class="eyebrow">LAPORAN KASIR</p><h1>Penjualan</h1><p class="muted">Transaksi dengan pembayaran sukses pada rentang tanggal terpilih.</p></div></header>
+            <header class="page-heading"><div><p class="eyebrow">LAPORAN KASIR</p><h1>Penjualan</h1><p class="muted">Transaksi dengan pembayaran sukses pada rentang tanggal terpilih.</p></div><button class="small-button" id="sales-export" type="button">Unduh CSV</button></header>
             <section class="panel report-filter"><form id="sales-filter" class="filter-form"><label>Dari<input name="from" type="date" required></label><label>Sampai<input name="to" type="date" required></label><label>Kasir<select name="cashier_id"><option value="">Semua kasir</option></select></label><button class="primary-button" type="submit">Terapkan filter</button></form></section>
             <div class="metric-grid report-metrics" id="sales-metrics"></div>
-            <section class="panel"><header class="panel-heading"><div><h2>Rincian transaksi</h2><p id="sales-range-label"></p></div><span id="sales-row-count" class="date-chip"></span></header><div class="table-scroll"><table><thead><tr><th>Waktu</th><th>Transaksi / Order</th><th>Kasir</th><th>Metode</th><th>Tipe order</th><th>Jumlah</th></tr></thead><tbody id="sales-body"><tr><td colspan="6" class="table-empty">Pilih rentang tanggal.</td></tr></tbody></table></div></section>
+            <section class="panel"><header class="panel-heading"><div><h2>Rincian transaksi</h2><p id="sales-range-label"></p></div><span id="sales-row-count" class="date-chip"></span></header><div class="table-scroll"><table><thead><tr><th>Waktu</th><th>Transaksi / Order</th><th>Kasir</th><th>Metode</th><th>Tipe order</th><th>Item / qty</th><th>Jumlah</th></tr></thead><tbody id="sales-body"><tr><td colspan="7" class="table-empty">Pilih rentang tanggal.</td></tr></tbody></table></div></section>
           </section>
 
           <section id="shifts-page" class="page-view hidden">
-            <header class="page-heading"><div><p class="eyebrow">REKONSILIASI KAS</p><h1>Rekap shift</h1><p class="muted">Lihat kas awal, perkiraan, hasil hitung, dan selisih per shift.</p></div></header>
+            <header class="page-heading"><div><p class="eyebrow">REKONSILIASI KAS</p><h1>Rekap shift</h1><p class="muted">Telusuri pergerakan uang laci, hitung kas akhir, dan alasan selisih.</p></div><button class="small-button" id="shift-export" type="button">Unduh CSV</button></header>
             <section class="panel report-filter"><form id="shift-filter" class="filter-form"><label>Dari<input name="from" type="date" required></label><label>Sampai<input name="to" type="date" required></label><label>Kasir<select name="cashier_id"><option value="">Semua kasir</option></select></label><button class="primary-button" type="submit">Terapkan filter</button></form></section>
             <div class="metric-grid report-metrics" id="shift-metrics"></div>
-            <section class="panel"><header class="panel-heading"><div><h2>Daftar shift</h2><p id="shift-range-label"></p></div><span id="shift-row-count" class="date-chip"></span></header><div class="table-scroll"><table><thead><tr><th>Kasir</th><th>Status</th><th>Dibuka</th><th>Ditutup</th><th>Kas awal</th><th>Perkiraan</th><th>Kas akhir</th><th>Selisih</th></tr></thead><tbody id="shift-body"><tr><td colspan="8" class="table-empty">Pilih rentang tanggal.</td></tr></tbody></table></div></section>
+            <section class="panel"><header class="panel-heading"><div><h2>Daftar shift</h2><p id="shift-range-label"></p></div><span id="shift-row-count" class="date-chip"></span></header><div class="table-scroll"><table><thead><tr><th>Kasir</th><th>Status</th><th>Dibuka</th><th>Ditutup</th><th>Kas awal</th><th>Kas masuk</th><th>Kas keluar</th><th>Penjualan tunai</th><th>Perkiraan</th><th>Kas akhir</th><th>Selisih</th><th>Catatan / alasan</th></tr></thead><tbody id="shift-body"><tr><td colspan="12" class="table-empty">Pilih rentang tanggal.</td></tr></tbody></table></div></section>
           </section>
         </div>
       </main>

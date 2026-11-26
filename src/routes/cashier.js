@@ -98,7 +98,25 @@ export async function cashierRoutes(app) {
         WHERE s.company_id=$1 AND s.outlet_id=$2 AND s.cashier_user_id=$3 AND s.status='open'`,
       [companyId, outletId, userId]
     );
-    return { shift: result.rows[0] ?? null };
+    const shift = result.rows[0] ?? null;
+    const drafts = shift ? await pool.query(
+      `SELECT o.id,o.order_number,o.status,o.grand_total_amount::text,
+              latest_payment.status AS payment_status,o.updated_at
+         FROM gcims.sales_orders o
+         LEFT JOIN LATERAL (
+           SELECT p.status FROM gcims.payments p
+            WHERE p.company_id=o.company_id AND p.order_id=o.id
+            ORDER BY p.created_at DESC,p.id DESC LIMIT 1
+         ) latest_payment ON TRUE
+        WHERE o.company_id=$1 AND o.outlet_id=$2 AND o.cashier_shift_id=$3
+          AND o.status IN ('draft','pending_payment')
+        ORDER BY o.updated_at DESC,o.id DESC`,
+      [companyId,outletId,shift.id]
+    ) : { rows: [] };
+    return { shift, drafts: drafts.rows.map((draft) => ({
+      ...draft,
+      grand_total_amount: Number(draft.grand_total_amount)
+    })) };
   });
 
   app.post('/cashier/shifts', { preHandler: [app.authenticate, app.requirePermission('pos.shift.write')] }, async (request, reply) => {
@@ -159,6 +177,9 @@ export async function cashierRoutes(app) {
       const shift = locked.rows[0];
       const expected = Number(shift.opening_cash_amount) + Number(totals.rows[0].cash_in) - Number(totals.rows[0].cash_out) + Number(sales.rows[0].cash_sales);
       const variance = parsed.data.closing_cash_amount - expected;
+      if (variance !== 0 && !parsed.data.closing_note) {
+        throw unprocessable('SHIFT_VARIANCE_REASON_REQUIRED', 'Isi alasan selisih kas sebelum menutup shift.');
+      }
       const result = await client.query(
         `UPDATE gcims.cashier_shifts SET status='closed',closed_at=now(),closing_cash_amount=$3,
           expected_cash_amount=$4,variance_amount=$5,closing_note=$6,updated_at=now()

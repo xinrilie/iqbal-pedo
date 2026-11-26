@@ -16,6 +16,7 @@ const state = {
   stockLocations: [],
   stockLocationId: null,
   shift: null,
+  shiftDrafts: [],
   shiftMode: 'open',
   menus: [],
   products: [],
@@ -136,6 +137,7 @@ function signOut(message = '') {
   state.stockLocations = [];
   state.stockLocationId = null;
   state.shift = null;
+  state.shiftDrafts = [];
   state.menus = [];
   state.products = [];
   state.cart = [];
@@ -215,9 +217,202 @@ async function initializeApp() {
 async function refreshShift() {
   const result = await request('/cashier/shift');
   state.shift = result.shift;
+  state.shiftDrafts = result.drafts ?? [];
   updateHeader();
   renderCart();
   renderMenuGrid();
+}
+
+function renderShiftDrafts() {
+  const panel = $('#shift-drafts');
+  const closing = state.shiftMode === 'close';
+  panel.classList.toggle('hidden', !closing);
+  if (!closing) {
+    panel.innerHTML = '';
+    $('#save-shift').disabled = false;
+    return;
+  }
+
+  const unsavedCart = state.cart.length > 0 && !state.currentOrder;
+  const drafts = state.shiftDrafts ?? [];
+  const entries = drafts.map((draft) => `<li>
+    <div><strong>${escapeHtml(draft.order_number)}</strong><small>${formatMoney(draft.grand_total_amount)} · ${escapeHtml(draft.status === 'pending_payment' ? 'Pembayaran diproses' : 'Belum dibayar')}</small></div>
+    ${draft.payment_status === 'pending'
+      ? '<span class="draft-in-progress">Tunggu pembayaran</span>'
+      : `<div class="draft-actions"><button class="small-button" type="button" data-resume-shift-draft="${escapeHtml(draft.id)}">Lanjutkan</button><button class="small-button danger-button" type="button" data-cancel-shift-draft="${escapeHtml(draft.id)}">Batalkan</button></div>`}
+  </li>`).join('');
+  const localOrderIsListed = !state.currentOrder || drafts.some((draft) => draft.id === state.currentOrder.id);
+  const localDraftWarning = state.currentOrder && !localOrderIsListed
+    ? '<p class="draft-warning">Draft pada perangkat ini belum termuat. Muat ulang daftar sebelum menutup shift.</p>'
+    : '';
+  panel.innerHTML = `${unsavedCart ? `<div class="unsaved-cart-warning"><span>Keranjang ini belum tersimpan sebagai order.</span><button class="small-button danger-button" data-discard-shift-cart type="button">Kosongkan keranjang</button></div>` : ''}
+    ${drafts.length ? `<strong class="draft-panel-title">${drafts.length} draft masih terbuka</strong><ul>${entries}</ul>` : ''}
+    ${localDraftWarning}
+    ${!drafts.length && !unsavedCart && !localDraftWarning ? '<p class="draft-panel-clear">Tidak ada draft yang menahan penutupan shift.</p>' : ''}`;
+  $('#save-shift').disabled = drafts.length > 0 || unsavedCart || Boolean(localDraftWarning);
+}
+
+function renderHistoryDrafts() {
+  const section = $('#history-drafts');
+  const container = $('#history-draft-list');
+  const drafts = state.shiftDrafts ?? [];
+  section.classList.toggle('hidden', drafts.length === 0);
+  container.innerHTML = drafts.map((draft) => `<article class="history-card history-draft-card">
+    <div><strong>${escapeHtml(draft.order_number)}</strong><span>${escapeHtml(draft.status === 'pending_payment' ? 'Pembayaran tertunda' : 'Belum dibayar')} · ${formatMoney(draft.grand_total_amount)}</span></div>
+    ${draft.payment_status === 'pending'
+      ? '<span class="draft-in-progress">Pembayaran sedang diproses</span>'
+      : `<div class="draft-actions"><button class="small-button" type="button" data-resume-shift-draft="${escapeHtml(draft.id)}">Lanjutkan</button><button class="small-button danger-button" type="button" data-cancel-shift-draft="${escapeHtml(draft.id)}">Batalkan</button></div>`}
+  </article>`).join('');
+}
+
+function renderShiftCashBreakdown() {
+  const container = $('#shift-expected');
+  const closing = state.shiftMode === 'close';
+  container.classList.toggle('hidden', !closing);
+  if (!closing) { container.innerHTML = ''; return; }
+  const shift = state.shift ?? {};
+  const expected = Number(shift.expected_cash_amount ?? 0);
+  container.innerHTML = `<div class="cash-breakdown-row"><span>Modal awal</span><strong>${formatMoney(shift.opening_cash_amount)}</strong></div>
+    <div class="cash-breakdown-row"><span>Kas masuk</span><strong>+${formatMoney(shift.cash_in_amount)}</strong></div>
+    <div class="cash-breakdown-row"><span>Kas keluar</span><strong>−${formatMoney(shift.cash_out_amount)}</strong></div>
+    <div class="cash-breakdown-row"><span>Penjualan tunai</span><strong>+${formatMoney(shift.cash_sales_amount)}</strong></div>
+    <div class="cash-breakdown-row cash-breakdown-total"><span>Perkiraan kas di laci</span><strong>${formatMoney(expected)}</strong></div>
+    <div class="cash-breakdown-row cash-breakdown-variance" id="shift-variance"><span>Selisih saat ini</span><strong>Masukkan kas akhir</strong></div>`;
+  updateShiftVariance();
+}
+
+function updateShiftVariance() {
+  const row = $('#shift-variance');
+  if (!row || state.shiftMode !== 'close') return;
+  const input = $('#shift-amount').value.trim();
+  const amount = Number(input);
+  const value = row.querySelector('strong');
+  const note = $('#shift-note');
+  const label = $('#shift-note-label');
+  if (!input || !Number.isSafeInteger(amount)) {
+    value.textContent = 'Masukkan kas akhir';
+    row.classList.remove('variance-short', 'variance-over');
+    note.required = false;
+    label.firstChild.textContent = 'Catatan penutupan (opsional)';
+    return;
+  }
+  const variance = amount - Number(state.shift?.expected_cash_amount ?? 0);
+  value.textContent = `${variance > 0 ? '+' : ''}${formatMoney(variance)}`;
+  row.classList.toggle('variance-short', variance < 0);
+  row.classList.toggle('variance-over', variance > 0);
+  note.required = variance !== 0;
+  label.firstChild.textContent = variance !== 0 ? 'Alasan selisih kas (wajib)' : 'Catatan penutupan (opsional)';
+}
+
+async function resumeShiftDraft(orderId, button) {
+  if (state.currentOrder?.id === orderId) {
+    hideShiftDialog();
+    $('#history-view').classList.add('hidden');
+    $('#pos-layout').classList.remove('hidden');
+    window.history.replaceState({}, '', '/pos');
+    document.querySelectorAll('[data-nav]').forEach((entry) => entry.classList.toggle('active', entry.dataset.nav === 'pos'));
+    setCartOpen(true);
+    return;
+  }
+  if (state.currentOrder || state.cart.length) {
+    toast('Selesaikan atau kosongkan keranjang saat ini sebelum membuka draft lain.', 'error');
+    return;
+  }
+  const draft = state.shiftDrafts.find((entry) => entry.id === orderId);
+  if (!draft || draft.payment_status === 'pending') return;
+  button.disabled = true;
+  try {
+    const order = await request(`/orders/${encodeURIComponent(orderId)}`);
+    if (!['draft','pending_payment'].includes(order.status) || order.payment_status === 'pending') {
+      await refreshShift();
+      renderShiftDrafts();
+      throw new Error('Draft ini sudah berubah status dan tidak dapat dilanjutkan.');
+    }
+    if (!state.stockLocations.some((location) => location.id === order.stock_location_id)) {
+      throw new Error('Lokasi stok draft sudah tidak aktif. Batalkan draft atau minta admin memeriksa lokasi stok.');
+    }
+    const restoredLines = order.lines.map((line) => {
+      const product = state.products.find((entry) => entry.menu_variant_id === line.menu_variant_id);
+      return {
+        variantId: line.menu_variant_id,
+        menuName: line.menu_name,
+        variantName: line.variant_name,
+        sku: product?.code ?? '',
+        price: Number(line.unit_price_amount),
+        quantity: Number(line.quantity),
+        note: line.item_note ?? ''
+      };
+    });
+    state.currentOrder = order;
+    state.cart = restoredLines;
+    state.orderKey = null;
+    state.paymentKey = makeKey();
+    state.paymentRequest = null;
+    state.draftDirty = false;
+    state.stockLocationId = order.stock_location_id;
+    state.orderType = order.order_type;
+    state.tableLabel = order.table_label ?? '';
+    $('#table-label').value = state.tableLabel;
+    $('#customer-note').value = order.customer_note ?? '';
+    renderLocationSelect();
+    hideShiftDialog();
+    $('#history-view').classList.add('hidden');
+    $('#success-view').classList.add('hidden');
+    $('#pos-layout').classList.remove('hidden');
+    window.history.replaceState({}, '', '/pos');
+    document.querySelectorAll('[data-nav]').forEach((entry) => entry.classList.toggle('active', entry.dataset.nav === 'pos'));
+    renderCart();
+    renderMenuGrid();
+    setCartOpen(true);
+    toast(`Draft ${order.order_number} dibuka kembali.`);
+  } catch (error) {
+    toast(error.message, 'error');
+    button.disabled = false;
+  }
+}
+
+async function cancelShiftDraft(orderId, button) {
+  const draft = state.shiftDrafts.find((entry) => entry.id === orderId);
+  if (!draft || draft.payment_status === 'pending') return;
+  if (!confirm(`Batalkan draft ${draft.order_number}? Draft ini tidak bisa dilanjutkan kembali.`)) return;
+  button.disabled = true;
+  try {
+    await request(`/orders/${encodeURIComponent(orderId)}/cancel`, {
+      method: 'POST', body: { reason: 'Kasir membatalkan draft sebelum tutup shift' }
+    });
+    state.shiftDrafts = state.shiftDrafts.filter((entry) => entry.id !== orderId);
+    if (state.currentOrder?.id === orderId) {
+      state.cart = [];
+      state.currentOrder = null;
+      state.orderKey = null;
+      state.paymentKey = null;
+      state.paymentRequest = null;
+      state.draftDirty = false;
+      state.tableLabel = '';
+      $('#table-label').value = '';
+      $('#customer-note').value = '';
+      renderCart();
+    }
+    renderShiftDrafts();
+    await refreshShift();
+    renderShiftDrafts();
+    renderHistoryDrafts();
+    toast(`Draft ${draft.order_number} dibatalkan.`);
+  } catch (error) {
+    toast(error.message, 'error');
+    button.disabled = false;
+  }
+}
+
+function discardUnsubmittedShiftCart() {
+  if (!state.cart.length || state.currentOrder) return;
+  if (!confirm('Kosongkan keranjang yang belum disimpan sebagai order?')) return;
+  state.cart = [];
+  state.tableLabel = '';
+  $('#table-label').value = '';
+  $('#customer-note').value = '';
+  renderCart();
+  renderShiftDrafts();
 }
 
 function openShiftModal(mode) {
@@ -230,14 +425,14 @@ function openShiftModal(mode) {
   $('#shift-amount').value = closing || movement ? '' : '0';
   $('#shift-amount').placeholder = closing || movement ? 'Masukkan nominal' : '0';
   $('#shift-note-label').classList.toggle('hidden', !closing && !movement);
-  $('#shift-note-label').firstChild.textContent = movement ? 'Alasan' : 'Catatan penutupan';
+  $('#shift-note-label').firstChild.textContent = movement ? 'Alasan' : 'Catatan penutupan (opsional)';
   $('#shift-note').required = movement;
   $('#cash-event-type-label').classList.toggle('hidden', !movement);
-  $('#shift-expected').classList.toggle('hidden', !closing);
-  if (closing) $('#shift-expected').textContent = `Perkiraan kas di laci: ${formatMoney(state.shift?.expected_cash_amount ?? 0)}`;
+  renderShiftCashBreakdown();
   $('#shift-error').classList.add('hidden');
   $('#close-shift').classList.toggle('hidden', !state.shift);
   $('#save-shift').innerHTML = `<span>${closing ? 'Tutup shift' : movement ? 'Simpan kas' : 'Mulai shift'}</span><span>→</span>`;
+  renderShiftDrafts();
   $('#shift-modal').classList.remove('hidden');
   shiftReturnFocus = document.activeElement;
   window.setTimeout(() => $('#shift-amount').focus(), 20);
@@ -248,14 +443,30 @@ async function saveShift(event) {
   const amount = Number($('#shift-amount').value);
   if (!Number.isSafeInteger(amount) || amount < 0) return;
   const closing = state.shiftMode === 'close';
+  const unsubmittedCart = state.cart.length > 0 && !state.currentOrder;
+  if (closing && (state.shiftDrafts.length > 0 || unsubmittedCart || (state.currentOrder && !state.shiftDrafts.some((draft) => draft.id === state.currentOrder.id)))) {
+    renderShiftDrafts();
+    $('#shift-error').textContent = 'Batalkan semua draft atau kosongkan keranjang yang belum disimpan sebelum menutup shift.';
+    $('#shift-error').classList.remove('hidden');
+    return;
+  }
+  const closingNote = $('#shift-note').value.trim();
+  if (closing && amount !== Number(state.shift?.expected_cash_amount ?? 0) && !closingNote) {
+    $('#shift-note').required = true;
+    $('#shift-error').textContent = 'Isi alasan selisih kas untuk melanjutkan.';
+    $('#shift-error').classList.remove('hidden');
+    $('#shift-note').focus();
+    return;
+  }
   $('#save-shift').disabled = true;
   $('#shift-error').classList.add('hidden');
   try {
     if (closing) {
       const result = await request(`/cashier/shifts/${encodeURIComponent(state.shift.id)}/close`, {
-        method: 'POST', body: { closing_cash_amount: amount, closing_note: $('#shift-note').value.trim() || null }
+        method: 'POST', body: { closing_cash_amount: amount, closing_note: closingNote || null }
       });
       state.shift = null;
+      state.shiftDrafts = [];
       hideShiftDialog();
       toast(`Shift ditutup. Selisih kas: ${formatMoney(result.shift.variance_amount)}.`);
     } else if (state.shiftMode === 'movement') {
@@ -278,10 +489,14 @@ async function saveShift(event) {
     renderCart();
     renderMenuGrid();
   } catch (error) {
+    if (error.code === 'SHIFT_HAS_OPEN_ORDERS') {
+      try { await refreshShift(); } catch {}
+      renderShiftDrafts();
+    }
     $('#shift-error').textContent = error.message;
     $('#shift-error').classList.remove('hidden');
   } finally {
-    $('#save-shift').disabled = false;
+    renderShiftDrafts();
   }
 }
 
@@ -488,7 +703,7 @@ function renderCart() {
 function serializeCart() {
   return state.cart.map((line) => ({
     menu_variant_id: line.variantId,
-    quantity: `${line.quantity}.000`,
+    quantity: String(line.quantity).includes('.') ? String(line.quantity) : `${line.quantity}.000`,
     item_note: line.note.trim() || null
   }));
 }
@@ -611,6 +826,8 @@ async function confirmCashPayment() {
     try { receipt = await request(`/orders/${encodeURIComponent(state.currentOrder.id)}/receipt`); }
     catch (error) { toast(`Pembayaran berhasil, tetapi struk tidak dapat dimuat: ${error.message}`, 'error'); }
     showSuccess({ payment, receipt, order: state.currentOrder, received });
+    try { await refreshShift(); }
+    catch (error) { toast(`Pembayaran berhasil. Ringkasan shift belum diperbarui: ${error.message}`, 'error'); }
   } catch (error) {
     $('#payment-error').textContent = error.message || 'Pembayaran belum berhasil. Coba lagi dengan transaksi yang sama.';
     $('#payment-error').classList.remove('hidden');
@@ -641,8 +858,14 @@ function statusLabel(status) {
 
 function showSuccess({ payment, receipt, order, received }) {
   state.lastReceipt = { payment, receipt, order, received };
-  setCartOpen(false);
+  state.cart = [];
+  state.currentOrder = null;
+  state.orderKey = null;
+  state.paymentKey = null;
+  state.paymentRequest = null;
+  state.draftDirty = false;
   $('#cart-launcher').classList.add('hidden');
+  setCartOpen(false);
   $('#payment-modal').classList.add('hidden');
   $('#pos-layout').classList.add('hidden');
   $('#history-view').classList.add('hidden');
@@ -710,6 +933,8 @@ async function renderHistory() {
   $('#pos-layout').classList.add('hidden');
   $('#success-view').classList.add('hidden');
   $('#history-view').classList.remove('hidden');
+  try { await refreshShift(); } catch {}
+  renderHistoryDrafts();
   const container = $('#history-list');
   container.innerHTML = '<div class="history-empty">Memuat riwayat transaksi…</div>';
   try {
@@ -801,8 +1026,22 @@ function initialize() {
     openShiftModal('movement');
   });
   $('#shift-form').addEventListener('submit', saveShift);
+  $('#shift-amount').addEventListener('input', updateShiftVariance);
   $('#close-shift').addEventListener('click', closeShiftDialog);
   $('#shift-modal').addEventListener('click', (event) => { if (event.target === $('#shift-modal')) closeShiftDialog(); });
+  $('#shift-drafts').addEventListener('click', (event) => {
+    const resumeButton = event.target.closest('[data-resume-shift-draft]');
+    if (resumeButton) return resumeShiftDraft(resumeButton.dataset.resumeShiftDraft, resumeButton);
+    const cancelButton = event.target.closest('[data-cancel-shift-draft]');
+    if (cancelButton) return cancelShiftDraft(cancelButton.dataset.cancelShiftDraft, cancelButton);
+    if (event.target.closest('[data-discard-shift-cart]')) discardUnsubmittedShiftCart();
+  });
+  $('#history-drafts').addEventListener('click', (event) => {
+    const resumeButton = event.target.closest('[data-resume-shift-draft]');
+    if (resumeButton) return resumeShiftDraft(resumeButton.dataset.resumeShiftDraft, resumeButton);
+    const cancelButton = event.target.closest('[data-cancel-shift-draft]');
+    if (cancelButton) cancelShiftDraft(cancelButton.dataset.cancelShiftDraft, cancelButton);
+  });
   $('#drawer-button').addEventListener('click', async () => {
     if (!state.shift) return openShiftModal('open');
     try {

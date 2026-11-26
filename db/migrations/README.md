@@ -1,13 +1,26 @@
 # Migration policy
 
-- Use the numbered SQL files in this directory to change schema.
-- Existing migrations are immutable after they have been applied. Do not rename, reorder, squash, or edit them; make a new migration instead.
-- Choose the next four-digit number and a short `snake_case` description, for example `0012_inventory_adjustments.sql`.
-- Wrap each migration in a transaction when PostgreSQL supports transactional execution.
-- Scope new tables, unique constraints, and foreign keys consistently by `company_id` and `outlet_id` where the owning schema requires it.
-- Keep reference/test data out of schema migrations. Use `db/seeds/`, `db/preflight/`, or `db/dev/` according to their documented purpose.
-- Update [`../README.md`](../README.md) and the project root [`../../README.md`](../../README.md) when the setup order or feature coverage changes.
+- Use the numbered SQL files in this directory to change schema. The current sequence is `0001`–`0013`.
+- Applied migration files are immutable. Do not rename, reorder, squash, or edit them; add the next numbered file.
+- Wrap each migration in an outer transaction (`BEGIN;` / `COMMIT;`). The runner records each migration in the same transaction as its schema change.
+- Keep test/reference data outside migrations. Use `db/seeds/`, `db/preflight/`, or `db/dev/` for their documented purposes.
+- Scope constraints and relationships by company/outlet as required by the owning schema.
+- Update [`../README.md`](../README.md), root [`../../README.md`](../../README.md), and the operations guide when the migration sequence or operator steps change.
 
-This MVP has no automatic migration runner or schema version table. Keep a record of files applied to each local database. The canonical setup sequence and PowerShell commands are in [`../README.md`](../README.md).
+## Apply migrations
 
-The latest migration is `0012_auth_session_revocation.sql`. Apply it before starting the updated application; it adds the token version used to revoke existing sessions after password or account status changes.
+Use the migration runner as the canonical route for fresh or existing databases. Set `DATABASE_URL` to the intended target, inspect the target name printed by the runner, and start with a dry run:
+
+```powershell
+npm.cmd run db:migrate -- --dry-run
+```
+
+If the target and pending migration list are correct, run interactively:
+
+```powershell
+npm.cmd run db:migrate
+```
+
+The runner checks the PostgreSQL version, detects/baselines a recognized existing schema, validates migration names/order/checksums, takes an advisory lock, runs configured preflights, and applies each migration with a schema ledger entry transactionally. It stops on mismatches or failed checks. `--yes` is intended only for a controlled automation after target validation; do not use it to skip operator review.
+
+Read [`../../docs/operations-level2.md`](../../docs/operations-level2.md) before production-like changes. Back up and verify the restore path first. Optional demo/catalog seeds are separate from schema migration and must follow their database-scope guards.

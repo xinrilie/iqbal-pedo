@@ -3,23 +3,28 @@ import bcrypt from 'bcryptjs';
 import { isBcryptPasswordLengthValid } from '../lib/auth-input.js';
 import { pool, withTransaction } from '../lib/db.js';
 import { badRequest, conflict, notFound, unprocessable } from '../lib/errors.js';
+import { cashierShiftCsv, salesReportCsv, stockLedgerCsv } from '../lib/csv.js';
 
 const InventoryQuery = z.object({ q: z.string().trim().max(120).optional() });
 const DateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
 });
-const LedgerQuery = z.object({
+const LedgerFilters = z.object({
   q: z.string().trim().max(120).optional(),
   from: DateOnly.optional(), to: DateOnly.optional(),
   stock_location_id: z.string().uuid().optional(),
-  movement_type: z.enum(['opening_balance','goods_receipt','sale_consumption','waste','adjustment_in','adjustment_out','transfer_in','transfer_out','return_to_stock','stocktake_in','stocktake_out']).optional(),
+  movement_type: z.enum(['opening_balance','goods_receipt','sale_consumption','waste','adjustment_in','adjustment_out','transfer_in','transfer_out','return_to_stock','stocktake_in','stocktake_out']).optional()
+});
+const LedgerQuery = LedgerFilters.extend({
   limit: z.coerce.number().int().min(1).max(200).default(100),
   offset: z.coerce.number().int().min(0).max(50000).default(0)
 });
-const ReportQuery = z.object({
+const ReportFilters = z.object({
   from: DateOnly.optional(), to: DateOnly.optional(),
-  cashier_id: z.string().uuid().optional(),
+  cashier_id: z.string().uuid().optional()
+});
+const ReportQuery = ReportFilters.extend({
   limit: z.coerce.number().int().min(1).max(200).default(100)
 });
 const CashierCreate = z.object({
@@ -535,16 +540,58 @@ export async function adminRoutes(app) {
       pool.query(
         `SELECT p.id AS payment_id,p.payment_number,p.method,p.amount,p.cash_received_amount,p.cash_change_amount,p.confirmed_at,
                 o.id AS order_id,o.order_number,o.order_type,o.table_label,o.status AS order_status,
-                COALESCE(u.full_name,'Kasir tidak diketahui') AS cashier_name,o.cashier_user_id
+                COALESCE(u.full_name,'Kasir tidak diketahui') AS cashier_name,o.cashier_user_id,
+                items.item_quantity,items.item_summary
            FROM gcims.payments p JOIN gcims.sales_orders o ON o.company_id=p.company_id AND o.id=p.order_id
            JOIN gcims.outlets outlet ON outlet.company_id=o.company_id AND outlet.id=o.outlet_id
            LEFT JOIN gcims.users u ON u.id=o.cashier_user_id
+           LEFT JOIN LATERAL (
+             SELECT COALESCE(SUM(soi.quantity),0)::numeric(18,3)::text AS item_quantity,
+                    COALESCE(string_agg(concat_ws(' - ',soi.menu_name_snapshot,soi.variant_name_snapshot)||' × '||replace(trim_scale(soi.quantity)::text,'.',','),chr(10) ORDER BY soi.line_no),'') AS item_summary
+               FROM gcims.sales_order_items soi
+              WHERE soi.company_id=o.company_id AND soi.order_id=o.id
+           ) items ON TRUE
           WHERE p.company_id=$1 AND o.outlet_id=$2 AND p.status='succeeded'
             AND (p.confirmed_at AT TIME ZONE outlet.timezone_name)::date BETWEEN $3::date AND $4::date
             AND ($5::uuid IS NULL OR o.cashier_user_id=$5)
           ORDER BY p.confirmed_at DESC,p.id DESC LIMIT $6`,[...params,parsed.data.limit])
     ]);
     return { from:range.from,to:range.to,summary:{transaction_count:Number(summary.rows[0].transaction_count),paid_amount:Number(summary.rows[0].paid_amount),cash_received_amount:Number(summary.rows[0].cash_received_amount),cash_change_amount:Number(summary.rows[0].cash_change_amount)},data:rows.rows.map((row)=>({...row,amount:Number(row.amount),cash_received_amount:row.cash_received_amount==null?null:Number(row.cash_received_amount),cash_change_amount:row.cash_change_amount==null?null:Number(row.cash_change_amount)})) };
+  });
+
+  app.get('/admin/sales/export', { preHandler: [app.authenticate, app.requirePermission('admin.sales.read')] }, async (request, reply) => {
+    const parsed = ReportFilters.safeParse(request.query);
+    if (!parsed.success) throw badRequest('Parameter ekspor penjualan tidak valid.', parsed.error.issues);
+    const { companyId, outletId } = request.gcims;
+    const range = await reportRange(companyId, outletId, parsed.data);
+    const result = await pool.query(
+      `SELECT p.payment_number,p.method,p.amount::text,p.cash_received_amount::text,p.cash_change_amount::text,p.confirmed_at,
+              o.order_number,o.order_type,o.table_label,o.status AS order_status,
+              COALESCE(u.full_name,'Kasir tidak diketahui') AS cashier_name,
+              items.item_quantity,items.item_summary
+         FROM gcims.payments p
+         JOIN gcims.sales_orders o ON o.company_id=p.company_id AND o.id=p.order_id
+         JOIN gcims.outlets outlet ON outlet.company_id=o.company_id AND outlet.id=o.outlet_id
+         LEFT JOIN gcims.users u ON u.id=o.cashier_user_id
+         LEFT JOIN LATERAL (
+           SELECT COALESCE(SUM(soi.quantity),0)::numeric(18,3)::text AS item_quantity,
+                  COALESCE(string_agg(concat_ws(' - ',soi.menu_name_snapshot,soi.variant_name_snapshot)||' × '||replace(trim_scale(soi.quantity)::text,'.',','),chr(10) ORDER BY soi.line_no),'') AS item_summary
+             FROM gcims.sales_order_items soi
+            WHERE soi.company_id=o.company_id AND soi.order_id=o.id
+         ) items ON TRUE
+        WHERE p.company_id=$1 AND o.outlet_id=$2 AND p.status='succeeded'
+          AND (p.confirmed_at AT TIME ZONE outlet.timezone_name)::date BETWEEN $3::date AND $4::date
+          AND ($5::uuid IS NULL OR o.cashier_user_id=$5)
+        ORDER BY p.confirmed_at DESC,p.id DESC
+        LIMIT 10001`,
+      [companyId,outletId,range.from,range.to,parsed.data.cashier_id??null]
+    );
+    if (result.rows.length > 10000) {
+      throw badRequest('Hasil ekspor melebihi 10.000 transaksi. Persempit rentang tanggal atau pilih kasir tertentu.');
+    }
+    reply.header('cache-control', 'no-store');
+    reply.header('content-disposition', `attachment; filename="gcims-penjualan-${range.from}-${range.to}.csv"`);
+    return reply.type('text/csv; charset=utf-8').send(salesReportCsv(result.rows));
   });
 
   app.get('/admin/shifts', { preHandler: [app.authenticate, app.requirePermission('admin.sales.read')] }, async (request) => {
@@ -572,6 +619,43 @@ export async function adminRoutes(app) {
     );
     const data=result.rows.map((row)=>Object.fromEntries(Object.entries(row).map(([key,value])=>[key,value!=null&&/amount$/.test(key)?Number(value):value])));
     return {from:range.from,to:range.to,summary:{total:data.length,open:data.filter((x)=>x.status==='open').length,closed:data.filter((x)=>x.status==='closed').length,total_variance:data.filter((x)=>x.variance_amount!=null).reduce((sum,x)=>sum+Number(x.variance_amount),0)},data};
+  });
+
+  app.get('/admin/shifts/export', { preHandler: [app.authenticate, app.requirePermission('admin.sales.read')] }, async (request, reply) => {
+    const parsed = ReportFilters.safeParse(request.query);
+    if (!parsed.success) throw badRequest('Parameter ekspor rekap shift tidak valid.', parsed.error.issues);
+    const { companyId, outletId } = request.gcims;
+    const range = await reportRange(companyId, outletId, parsed.data);
+    const result = await pool.query(
+      `SELECT s.status,s.opened_at,s.closed_at,s.opening_cash_amount::text,s.closing_cash_amount::text,
+              COALESCE(s.expected_cash_amount,s.opening_cash_amount+COALESCE(ev.cash_in,0)-COALESCE(ev.cash_out,0)+COALESCE(sales.cash_sales,0))::text AS expected_cash_amount,
+              s.variance_amount::text,s.closing_note,u.full_name AS cashier_name,
+              COALESCE(ev.cash_in,0)::text AS cash_in_amount,COALESCE(ev.cash_out,0)::text AS cash_out_amount,
+              COALESCE(sales.cash_sales,0)::text AS cash_sales_amount
+         FROM gcims.cashier_shifts s JOIN gcims.users u ON u.id=s.cashier_user_id
+         JOIN gcims.outlets outlet ON outlet.company_id=s.company_id AND outlet.id=s.outlet_id
+         LEFT JOIN LATERAL (
+           SELECT SUM(amount) FILTER(WHERE event_type='cash_in') AS cash_in,
+                  SUM(amount) FILTER(WHERE event_type='cash_out') AS cash_out
+             FROM gcims.cash_drawer_events WHERE company_id=s.company_id AND cashier_shift_id=s.id
+         ) ev ON TRUE
+         LEFT JOIN LATERAL (
+           SELECT SUM(p.amount) AS cash_sales
+             FROM gcims.sales_orders o JOIN gcims.payments p ON p.company_id=o.company_id AND p.order_id=o.id
+            WHERE o.company_id=s.company_id AND o.cashier_shift_id=s.id AND p.method='cash' AND p.status='succeeded'
+         ) sales ON TRUE
+        WHERE s.company_id=$1 AND s.outlet_id=$2
+          AND (s.opened_at AT TIME ZONE outlet.timezone_name)::date BETWEEN $3::date AND $4::date
+          AND ($5::uuid IS NULL OR s.cashier_user_id=$5)
+        ORDER BY s.opened_at DESC,s.id DESC LIMIT 10001`,
+      [companyId,outletId,range.from,range.to,parsed.data.cashier_id??null]
+    );
+    if (result.rows.length > 10000) {
+      throw badRequest('Hasil ekspor melebihi 10.000 shift. Persempit rentang tanggal atau pilih kasir tertentu.');
+    }
+    reply.header('cache-control', 'no-store');
+    reply.header('content-disposition', `attachment; filename="gcims-rekap-shift-${range.from}-${range.to}.csv"`);
+    return reply.type('text/csv; charset=utf-8').send(cashierShiftCsv(result.rows));
   });
 
   app.get('/admin/dashboard', { preHandler: [app.authenticate, app.requirePermission('admin.dashboard.read')] }, async (request) => {
@@ -699,7 +783,17 @@ export async function adminRoutes(app) {
     }
     const [ledgerResult, locationResult] = await Promise.all([
       pool.query(
-        `SELECT l.id,l.occurred_at,l.movement_type,l.quantity_delta_base::text,
+        `WITH ledger_balances AS (
+           SELECT id,
+                  SUM(quantity_delta_base) OVER (
+                    PARTITION BY company_id,outlet_id,inventory_item_id,stock_location_id,lot_id
+                    ORDER BY occurred_at,id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                  )::text AS balance_after_base
+             FROM gcims.stock_ledger
+            WHERE company_id=$1 AND outlet_id=$2
+         )
+         SELECT l.id,l.occurred_at,l.movement_type,l.quantity_delta_base::text,
+                balances.balance_after_base,
                 l.source_type,l.source_id,l.reason,
                 ii.id AS inventory_item_id,ii.sku,ii.name AS item_name,u.code AS base_uom_code,
                 sl.id AS stock_location_id,sl.name AS stock_location_name,
@@ -707,6 +801,7 @@ export async function adminRoutes(app) {
                 actor.full_name AS actor_name,
                 COUNT(*) OVER()::integer AS total_count
            FROM gcims.stock_ledger l
+           JOIN ledger_balances balances ON balances.id=l.id
            JOIN gcims.outlets o ON o.company_id=l.company_id AND o.id=l.outlet_id
            JOIN gcims.inventory_items ii ON ii.company_id=l.company_id AND ii.id=l.inventory_item_id
            JOIN gcims.uoms u ON u.id=ii.base_uom_id
@@ -734,5 +829,60 @@ export async function adminRoutes(app) {
       total: Number(ledgerResult.rows[0]?.total_count ?? 0), limit, offset,
       locations: locationResult.rows
     };
+  });
+
+  app.get('/admin/inventory/ledger/export', { preHandler: [app.authenticate, app.requirePermission('admin.inventory.read')] }, async (request, reply) => {
+    const parsed = LedgerFilters.safeParse(request.query);
+    if (!parsed.success) throw badRequest('Parameter ekspor ledger tidak valid.', parsed.error.issues);
+    const { companyId, outletId } = request.gcims;
+    const { from, to, q, stock_location_id: locationId, movement_type: movementType } = parsed.data;
+    if (from && to && from > to) throw badRequest('Rentang tanggal ledger tidak valid.');
+    if (from && to && (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000 > 366) {
+      throw badRequest('Rentang ledger maksimal 367 hari.');
+    }
+
+    const result = await pool.query(
+      `WITH ledger_balances AS (
+         SELECT id,
+                SUM(quantity_delta_base) OVER (
+                  PARTITION BY company_id,outlet_id,inventory_item_id,stock_location_id,lot_id
+                  ORDER BY occurred_at,id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                )::text AS balance_after_base
+           FROM gcims.stock_ledger
+          WHERE company_id=$1 AND outlet_id=$2
+       )
+       SELECT l.occurred_at,l.movement_type,l.quantity_delta_base::text,
+              balances.balance_after_base,
+              l.source_type,l.source_id,l.reason,
+              ii.sku,ii.name AS item_name,u.code AS base_uom_code,
+              sl.name AS stock_location_name,il.lot_code,il.expiry_date::text AS expiry_date,
+              actor.full_name AS actor_name
+         FROM gcims.stock_ledger l
+         JOIN ledger_balances balances ON balances.id=l.id
+         JOIN gcims.outlets o ON o.company_id=l.company_id AND o.id=l.outlet_id
+         JOIN gcims.inventory_items ii ON ii.company_id=l.company_id AND ii.id=l.inventory_item_id
+         JOIN gcims.uoms u ON u.id=ii.base_uom_id
+         JOIN gcims.stock_locations sl ON sl.company_id=l.company_id AND sl.outlet_id=l.outlet_id AND sl.id=l.stock_location_id
+         LEFT JOIN gcims.inventory_lots il ON il.company_id=l.company_id AND il.inventory_item_id=l.inventory_item_id
+           AND il.stock_location_id=l.stock_location_id AND il.id=l.lot_id
+         LEFT JOIN gcims.users actor ON actor.id=l.actor_user_id
+        WHERE l.company_id=$1 AND l.outlet_id=$2
+          AND ($3::date IS NULL OR l.occurred_at >= ($3::date::timestamp AT TIME ZONE o.timezone_name))
+          AND ($4::date IS NULL OR l.occurred_at < (($4::date + 1)::timestamp AT TIME ZONE o.timezone_name))
+          AND ($5::uuid IS NULL OR l.stock_location_id=$5)
+          AND ($6::text IS NULL OR l.movement_type=$6)
+          AND ($7::text IS NULL OR ii.name ILIKE '%'||$7||'%' OR ii.sku ILIKE '%'||$7||'%' OR il.lot_code ILIKE '%'||$7||'%')
+        ORDER BY l.occurred_at DESC,l.id DESC
+        LIMIT 10001`,
+      [companyId,outletId,from??null,to??null,locationId??null,movementType??null,q||null]
+    );
+    if (result.rows.length > 10000) {
+      throw badRequest('Hasil ekspor melebihi 10.000 baris. Persempit rentang tanggal atau gunakan filter item/lokasi.');
+    }
+    const fromPart = from ?? 'semua';
+    const toPart = to ?? 'semua';
+    reply.header('cache-control', 'no-store');
+    reply.header('content-disposition', `attachment; filename="gcims-ledger-${fromPart}-${toPart}.csv"`);
+    return reply.type('text/csv; charset=utf-8').send(stockLedgerCsv(result.rows));
   });
 }

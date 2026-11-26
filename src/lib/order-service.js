@@ -266,7 +266,7 @@ export async function getOrder({ companyId, outletId, orderId }) {
   if (!header.rowCount) throw notFound('Pesanan tidak ditemukan.');
   const order = header.rows[0];
   const itemRows = await pool.query(
-    `SELECT soi.id,soi.menu_name_snapshot AS menu_name,soi.variant_name_snapshot AS variant_name,
+    `SELECT soi.id,soi.menu_variant_id,soi.menu_name_snapshot AS menu_name,soi.variant_name_snapshot AS variant_name,
             soi.quantity::text,soi.unit_price_amount,soi.gross_amount,soi.discount_amount,
             soi.tax_amount,soi.total_amount,soi.item_note,mv.product_type
        FROM gcims.sales_order_items soi
@@ -276,6 +276,7 @@ export async function getOrder({ companyId, outletId, orderId }) {
   return {
     id: order.id,
     order_number: order.order_number,
+    stock_location_id: order.stock_location_id,
     status: order.status,
     order_type: order.order_type,
     table_label: order.table_label,

@@ -71,7 +71,8 @@
           </section>
 
           <section class="history-view hidden" id="history-view">
-            <div class="section-title"><div><p class="eyebrow">RIWAYAT SESI INI</p><h2>Transaksi saya</h2></div><span>Disimpan pada sesi browser ini</span></div>
+            <div class="section-title"><div><p class="eyebrow">RIWAYAT SESI INI</p><h2>Transaksi saya</h2></div><span>Transaksi selesai dan draft aktif pada shift ini</span></div>
+            <section class="history-drafts hidden" id="history-drafts"><header><h3>Draft belum selesai</h3><p>Lanjutkan checkout atau batalkan draft yang tidak jadi diproses.</p></header><div id="history-draft-list"></div></section>
             <div id="history-list" class="history-list"></div>
           </section>
 
@@ -136,7 +137,8 @@
           <label class="shift-note hidden" id="cash-event-type-label">Jenis aktivitas<select id="cash-event-type"><option value="cash_in">Kas masuk</option><option value="cash_out">Kas keluar</option></select></label>
           <label class="cash-input-label" id="shift-amount-label">Modal awal<div class="cash-input-wrap"><span>Rp</span><input id="shift-amount" type="number" min="0" step="1000" inputmode="numeric" required></div></label>
           <div class="shift-expected hidden" id="shift-expected"></div>
-          <label class="shift-note hidden" id="shift-note-label">Catatan penutupan<textarea id="shift-note" maxlength="500" rows="2" placeholder="Opsional"></textarea></label>
+          <div class="shift-drafts hidden" id="shift-drafts" aria-live="polite"></div>
+          <label class="shift-note hidden" id="shift-note-label">Catatan penutupan (opsional)<textarea id="shift-note" maxlength="500" rows="2" placeholder="Wajib diisi jika kas akhir berbeda dari perkiraan"></textarea></label>
           <p class="payment-error hidden" id="shift-error" role="alert"></p>
           <button class="pay-button confirm-payment" id="save-shift" type="submit"><span>Mulai shift</span><span>→</span></button>
         </form>

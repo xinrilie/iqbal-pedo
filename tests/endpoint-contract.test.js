@@ -41,6 +41,20 @@ test('admin stocktake and procurement views are routed and permission guarded', 
   assert.match(migration, /auth_token_version INTEGER NOT NULL DEFAULT 0/);
 });
 
+test('admin ledger export is permission guarded and matches current ledger filters', async () => {
+  const [admin, html, js] = await Promise.all([
+    readFile(resolve('src/routes/admin.js'), 'utf8'),
+    readFile(resolve('public/admin.html'), 'utf8'),
+    readFile(resolve('public/admin.js'), 'utf8')
+  ]);
+  assert.match(admin, /app\.get\('\/admin\/inventory\/ledger\/export'.*admin\.inventory\.read/s);
+  assert.match(admin, /LIMIT 10001/);
+  assert.match(admin, /stockLedgerCsv\(result\.rows\)/);
+  assert.match(html, /id="ledger-export"/);
+  assert.match(js, /admin\/inventory\/ledger\/export/);
+  assert.match(js, /ledgerQuery/);
+});
+
 test('admin browser script selectors resolve to page or dialog elements', async () => {
   const [html, js] = await Promise.all([
     readFile(resolve('public/admin.html'), 'utf8'),

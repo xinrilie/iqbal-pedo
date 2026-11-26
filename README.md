@@ -31,6 +31,8 @@ Before starting the server for the first time, set up an empty local/test databa
 
 Open `http://127.0.0.1:3000/`. Login sends Admin to `/admin` and Cashier to `/pos`. Use `npm.cmd test` to run the automated unit and source-contract tests.
 
+GitHub Actions runs `npm ci`, `npm run check`, and `npm test` on pushes and pull requests targeting `main`. A pull request that fails these checks should be fixed before merge.
+
 ## Project map
 
 | Path | Contents |
@@ -42,17 +44,17 @@ Open `http://127.0.0.1:3000/`. Login sends Admin to `/admin` and Cashier to `/po
 | `db/preflight/` | Read-only checks required before selected migrations |
 | `db/dev/` | Explicitly test-only stock fixtures |
 | `db/checks/` | Read-only database inspection queries |
-| `scripts/` | Local admin bootstrap and reference-catalog seed generator |
+| `scripts/` | Migration runner, encrypted database backup/restore, admin bootstrap, and reference-catalog seed generator |
 | `tests/` | Unit and source-contract tests |
 | `reference/` | API contracts, architecture, scope, and acceptance notes |
-| `docs/` | Product, data-import, procurement, and historical audit documentation |
+| `docs/` | Product, procurement, COBIT audit, and operational procedures/evidence templates |
 | `desain/` | UI design references |
 
 ## Database changes
 
 Start with [`db/README.md`](db/README.md) for the canonical setup order and PowerShell commands. Never replay the baseline schema or an already applied migration on a database with data. Treat numbered migrations as immutable after sharing: make the next numbered migration for every schema change. Keep seeds, preflight checks, and test fixtures separate from migrations.
 
-The current retail catalog support is migration `0011_retail_products.sql`. Migration `0012_auth_session_revocation.sql` adds session revocation after password or account status changes. Applying a migration changes the database schema; the app needs all numbered migrations before startup.
+The current schema sequence is migrations `0001`–`0013`. Use `npm run db:migrate -- --dry-run` to inspect the target and pending plan, then `npm run db:migrate` to apply interactively. The runner records schema versions/checksums and stops on unexpected database state or failed preflight. See [`docs/operations-level2.md`](docs/operations-level2.md) for backup, restore, release/UAT and incident procedures. Applying a migration changes the database schema; verify the target and backup before proceeding.
 
 ## Useful commands
 
@@ -61,6 +63,9 @@ npm run check       # JavaScript syntax checks
 npm test            # unit and source-contract tests
 npm run dev         # local development server with watch mode
 npm start           # start the server
+npm run db:migrate -- --dry-run # inspect migration plan
+npm run db:backup    # create encrypted PostgreSQL backup
+npm run db:restore -- ./backups/NAMA_FILE_ENKRIPSI.gcims.enc # ganti dengan path backup yang sebenarnya
 ```
 
 ## Collaboration and safety

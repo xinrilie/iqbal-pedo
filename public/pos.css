@@ -179,6 +179,12 @@ h1, h2, h3, p { margin-top: 0; }
 .history-view, .success-view { min-height: 550px; }
 .history-view > .section-title { margin-top: 0; }
 .history-view h2 { margin: 0; font-size: 24px; letter-spacing: -.04em; }
+.history-drafts { margin-bottom: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: #fbf8f2; }
+.history-drafts header { margin-bottom: 10px; }
+.history-drafts h3 { margin: 0 0 4px; font-size: 12px; }
+.history-drafts header p { margin: 0; color: var(--muted); font-size: 9px; }
+.history-draft-list { display: grid; gap: 8px; }
+.history-draft-card { grid-template-columns: minmax(0,1fr) auto; }
 .history-list { display: grid; gap: 10px; }
 .history-card { border: 1px solid var(--line); background: white; border-radius: 10px; padding: 15px 17px; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 18px; }
 .history-card strong { font-size: 11px; }
@@ -272,7 +278,14 @@ h1, h2, h3, p { margin-top: 0; }
 .cash-input-label { display: grid; gap: 7px; margin-top: 17px; font-size: 10px; font-weight: 700; }
 .shift-form { display: grid; gap: 12px; }
 .shift-form .cash-input-label { margin-top: 5px; }
-.shift-expected { border-radius: 8px; padding: 12px; background: var(--terracotta-soft); color: var(--terracotta); font-size: 10px; font-weight: 700; }
+.shift-expected { display: grid; gap: 7px; border-radius: 8px; padding: 12px; background: var(--terracotta-soft); color: var(--terracotta); font-size: 9px; }
+.cash-breakdown-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.cash-breakdown-row strong { color: var(--ink); font-size: 9px; white-space: nowrap; }
+.cash-breakdown-total { margin-top: 2px; padding-top: 8px; border-top: 1px solid #d8ae9c; font-weight: 750; }
+.cash-breakdown-total strong { font-size: 11px; }
+.cash-breakdown-variance { padding-top: 7px; border-top: 1px solid #ead4c8; color: var(--muted); }
+.cash-breakdown-variance.variance-short strong { color: var(--red); }
+.cash-breakdown-variance.variance-over strong { color: var(--olive); }
 .shift-note { display: grid; gap: 7px; font-size: 10px; font-weight: 700; }
 .shift-note textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 11px; resize: vertical; }
 .shift-note select { min-height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; background: white; font-size: 11px; }
@@ -360,6 +373,7 @@ h1, h2, h3, p { margin-top: 0; }
   .transaction-details { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .history-card { grid-template-columns: 1fr auto; gap: 9px; }
   .history-card .status-pill { grid-column: 2; grid-row: 1 / span 2; }
+  .history-draft-card .draft-actions { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
   .login-brand { top: 18px; left: 18px; }
   .login-screen { padding: 82px 16px 48px; }
   .login-card { padding: 24px 20px; }
@@ -385,6 +399,16 @@ h1, h2, h3, p { margin-top: 0; }
 .drawer-button { min-height: 44px; }
 .cart-launcher { min-height: 64px; }
 .stock-alert-confirm { min-height: 48px; }
+.shift-drafts { display: grid; gap: 8px; max-height: 180px; overflow: auto; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fbf8f2; }
+.draft-panel-title { font-size: 10px; }
+.shift-drafts ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.shift-drafts li, .unsaved-cart-warning { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 7px; border-top: 1px solid var(--line); }
+.shift-drafts li strong, .shift-drafts li small { display: block; }
+.shift-drafts li strong { font-size: 9px; }
+.draft-actions { display: flex; gap: 5px; flex: none; }
+.shift-drafts li small, .draft-in-progress, .draft-panel-clear, .draft-warning { color: var(--muted); font-size: 8px; }
+.unsaved-cart-warning { border-top: 0; padding-top: 0; color: var(--red); font-size: 9px; }
+.draft-warning { margin: 0; color: var(--red); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
