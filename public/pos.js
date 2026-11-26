@@ -92,11 +92,17 @@ async function request(path, { method = 'GET', body, headers = {}, auth = true, 
   if (auth && state.csrfToken && !['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) requestHeaders['x-csrf-token'] = state.csrfToken;
   if (body !== undefined) requestHeaders['content-type'] = 'application/json';
   if (key) requestHeaders['idempotency-key'] = key;
-  const response = await fetch(`${API}${path}`, {
-    method,
-    headers: requestHeaders,
-    ...(body === undefined ? {} : { body: JSON.stringify(body) })
-  });
+  let response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      method,
+      headers: requestHeaders,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) })
+    });
+  } catch (error) {
+    if (error instanceof TypeError) throw new Error('Tidak dapat terhubung ke server. Pastikan backend aktif, lalu coba lagi.');
+    throw error;
+  }
   let data;
   try { data = await response.json(); } catch { data = null; }
   if (!response.ok) {

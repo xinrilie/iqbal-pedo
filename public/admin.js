@@ -40,7 +40,9 @@ function showLogin(message=''){ $('#login-screen').classList.remove('hidden'); $
 function showToast(message,isError=false){const node=document.createElement('div');node.className=`toast${isError?' error':''}`;node.textContent=message;$('#toast-region').append(node);setTimeout(()=>node.remove(),4000);}
 async function request(path,{method='GET',body,auth=true,headers:extraHeaders={}}={}){
   const headers={...extraHeaders};if(auth&&session?.csrfToken&&!['GET','HEAD','OPTIONS'].includes(method.toUpperCase()))headers['x-csrf-token']=session.csrfToken;if(body!==undefined)headers['content-type']='application/json';
-  const response=await fetch(`${API}${path}`,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})});
+  let response;
+  try{response=await fetch(`${API}${path}`,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})});}
+  catch(error){if(error instanceof TypeError)throw new Error('Tidak dapat terhubung ke server. Pastikan backend aktif, lalu coba lagi.');throw error;}
   let data=null;try{data=await response.json();}catch{}
   if(!response.ok){const error=new Error(data?.error?.message??`Request gagal (${response.status}).`);error.status=response.status;error.requestId=data?.error?.request_id;if(response.status===401){session=null;showLogin('Sesi berakhir. Silakan masuk kembali.');}throw error;}
   return data;
@@ -319,7 +321,9 @@ async function loadLedger({append=false}={}){
 async function downloadCsv(path,query,button,filename,message){
   const originalText=button.textContent;button.disabled=true;button.textContent='Menyiapkan…';
   try{
-    const response=await fetch(`${API}${path}?${query}`,{headers:{accept:'text/csv'}});
+    let response;
+    try{response=await fetch(`${API}${path}?${query}`,{headers:{accept:'text/csv'}});}
+    catch(error){if(error instanceof TypeError)throw new Error('Tidak dapat terhubung ke server. Pastikan backend aktif, lalu coba lagi.');throw error;}
     if(!response.ok){let data=null;try{data=await response.json();}catch{}throw new Error(data?.error?.message??`Ekspor gagal (${response.status}).`);}
     const blob=await response.blob();const url=URL.createObjectURL(blob);const anchor=document.createElement('a');
     anchor.href=url;anchor.download=filename;document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);

@@ -26,6 +26,10 @@ form.addEventListener('submit',async(event)=>{
     if(!response.ok)throw new Error(result?.error?.message??'Username atau password tidak valid.');
     const identity=await identify();
     goToRole(identity.permissions);
-  }catch(error){setError(error.message||'Tidak dapat masuk. Coba lagi.');}
+  }catch(error){
+    setError(error instanceof TypeError
+      ? 'Tidak dapat terhubung ke server. Pastikan backend aktif, lalu coba lagi.'
+      : error.message||'Tidak dapat masuk. Coba lagi.');
+  }
   finally{button.disabled=false;button.innerHTML='<span>Masuk</span><span aria-hidden="true">→</span>';}
 });

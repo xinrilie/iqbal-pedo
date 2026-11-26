@@ -31,6 +31,7 @@ function shouldAlert(request, event, now) {
     state.count += 1;
     state.updatedAt = now;
     loginFailures.set(key, state);
+    while (loginFailures.size > MAX_TRACKED_KEYS) loginFailures.delete(loginFailures.keys().next().value);
     if (state.count < FAILURE_ALERT_THRESHOLD) return false;
     event = 'auth.login.failure_burst';
   }
