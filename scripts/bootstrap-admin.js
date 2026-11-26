@@ -125,6 +125,23 @@ try {
        SELECT $1, id FROM gcims.permissions
        ON CONFLICT DO NOTHING`, [roleId]
     );
+    const cashierRole = await client.query(
+      `INSERT INTO gcims.roles (company_id, code, name, description, scope, is_system_role)
+       VALUES ($1,'CASHIER','Kasir','Akun operasional kasir POS','outlet',TRUE)
+       ON CONFLICT (company_id, code) DO UPDATE
+       SET scope='outlet', is_system_role=TRUE
+       RETURNING id`, [companyId]
+    );
+    await client.query(
+      `INSERT INTO gcims.role_permissions (role_id, permission_id)
+       SELECT $1, id FROM gcims.permissions
+        WHERE code IN (
+          'pos.catalog.read','pos.order.create','pos.order.read','pos.order.update',
+          'pos.payment.create','pos.payment.read','pos.payment.cancel','pos.receipt.read',
+          'pos.shift.read','pos.shift.write','pos.cash_drawer.write'
+        )
+       ON CONFLICT DO NOTHING`, [cashierRole.rows[0].id]
+    );
     await client.query(
       `INSERT INTO gcims.user_role_assignments (company_id, user_id, role_id, outlet_id)
        VALUES ($1,$2,$3,NULL) ON CONFLICT DO NOTHING`, [companyId, userId, roleId]
