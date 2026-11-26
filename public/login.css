@@ -5,3 +5,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+.login-card label { font-size: 13px; }
+.login-card input { min-height: 46px; font-size: 14px; }
+.intro, .role-note { font-size: 12px; line-height: 1.55; }
+.error { font-size: 12px; }

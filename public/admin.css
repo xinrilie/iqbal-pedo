@@ -59,3 +59,27 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .stocktake-detail-panel .panel-heading { align-items: flex-start; flex-direction: column; }
 }
 .shift-note-cell{min-width:180px;max-width:300px;white-space:normal;line-height:1.45;color:var(--muted)}
+
+/* Bring the dense operational screens up to a comfortable reading size. */
+.admin-nav a { font-size: 12px; }
+.breadcrumb, .topbar-right { font-size: 12px; }
+.page-heading .muted, .panel-heading p { font-size: 12px; line-height: 1.5; }
+.eyebrow { font-size: 10px; }
+.metric-label { font-size: 12px; }
+.metric-value { font-size: clamp(22px, 2vw, 28px); }
+.metric-note, .data-note, .notice p, .outlet-card span { font-size: 11px; line-height: 1.5; }
+.panel-heading h2 { font-size: 16px; }
+.text-link, .date-chip, .role-pill { font-size: 11px; }
+.admin-main th { font-size: 10px; }
+.admin-main td { font-size: 12px; }
+.admin-main td strong { font-size: 12px; }
+.admin-main td small { font-size: 10px; }
+.stock-pill { font-size: 10px; }
+.search-box input, .inventory-filters select, .filter-form label,
+.cashier-form label, .password-dialog label { font-size: 12px; }
+.inventory-toolbar .search-box { min-height: 44px; }
+.sidebar-bottom button, .back-pos { min-height: 44px; display: flex; align-items: center; }
+.primary-button, .small-button { font-size: 12px; }
+.admin-nav a, .primary-button, .small-button { min-height: 44px; }
+.toast { font-size: 12px; line-height: 1.5; }
+.table-empty { font-size: 12px; }
