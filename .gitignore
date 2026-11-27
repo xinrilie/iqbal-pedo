@@ -55,3 +55,4 @@ backups/
 *HANDOFF*.md
 /scripts/README_draft_update_test.md
 /scripts/test-draft-update-idempotency.ps1
+graphify-out
