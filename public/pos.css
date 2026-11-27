@@ -492,6 +492,10 @@ select:focus-visible, a:focus-visible { outline: 3px solid #6f321e; outline-offs
   .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .product-art { height: clamp(105px, 34vw, 145px); }
   .drawer-actions .cart-launcher { min-width: min(100%, 240px); }
+  .cart-line-controls { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+  .cart-summary > div { min-width: 0; }
+  .cart-summary .total-line strong { font-size: clamp(16px, 5vw, 20px); white-space: nowrap; }
+  .cart-panel .pay-button { min-width: 0; }
   .menu-card-title { gap: 4px; }
   .product-type-tag { padding-inline: 5px; font-size: 8px; }
   .menu-card-bottom { display: grid; grid-template-columns: minmax(0, 1fr) 44px; grid-template-rows: auto auto; gap: 4px 6px; }
