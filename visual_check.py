@@ -1,4 +1,5 @@
 import asyncio
+import base64
 from pathlib import Path
 
 from playwright.async_api import async_playwright
@@ -11,13 +12,14 @@ async def main():
     js = (root / "public/admin.js").read_text(encoding="utf-8")
     html = html.replace('<link rel="stylesheet" href="/admin.css">', f"<style>{css}</style>")
     html = html.replace('<script src="/admin.js" defer></script>', "")
-    html = html.replace('src="/pos-assets/gourmets-logo.png"', f'src="file:///{root.as_posix()}/public/pos-assets/gourmets-logo.png"')
+    logo = base64.b64encode((root / "public/pos-assets/gourmets-logo.png").read_bytes()).decode("ascii")
+    html = html.replace('src="/pos-assets/gourmets-logo.png"', f'src="data:image/png;base64,{logo}"')
     api_mock = """<script>
     window.fetch = async (input) => {
       const url=String(input);
       let body={data:[]};
       if(url.endsWith('/auth/me')) body={csrf_token:'visual-check',permissions:['admin.dashboard.read','admin.menu.update'],user:{full_name:'Rani Admin'}};
-      if(url.endsWith('/admin/dashboard')) body={outlet_name:"Gourmet's Coffee · Kemang",active_stock_locations:4,gross_sales_amount:4285000,completed_transactions:87,low_stock_items:2,low_stock_list:[{name:'Susu full cream',sku:'DRK-014',on_hand_qty_base:3.5,minimum_stock_base:8,base_uom_code:'L'},{name:'Biji kopi house blend',sku:'COF-001',on_hand_qty_base:1.2,minimum_stock_base:3,base_uom_code:'kg'}]};
+      if(url.endsWith('/admin/dashboard')) body={data:{outlet_name:"Gourmet's Coffee · Kemang",active_stock_locations:4,gross_sales_amount:4285000,completed_transactions:87,low_stock_items:2,low_stock_list:[{name:'Susu full cream',sku:'DRK-014',on_hand_qty_base:3.5,minimum_stock_base:8,base_uom_code:'L'},{name:'Biji kopi house blend',sku:'COF-001',on_hand_qty_base:1.2,minimum_stock_base:3,base_uom_code:'kg'}]}};
       return {ok:true,status:200,json:async()=>body};
     };
     </script>"""
@@ -46,7 +48,7 @@ async def main():
             "active_nav_visible": await page.locator(".admin-nav [aria-current=page]").is_visible(),
             "nav_sizes": await page.locator(".admin-nav").evaluate("e => [e.clientWidth, e.scrollWidth]"),
         }
-        print({"desktop": desktop, "mobile": mobile, "page_errors": errors})
+        print(ascii({"desktop": desktop, "mobile": mobile, "page_errors": errors}))
         await browser.close()
 
 
