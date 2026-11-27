@@ -221,7 +221,12 @@ function showPage(page){
   if(!pages.includes(page))page='dashboard';
   pages.forEach((name)=>$(`#${name}-page`).classList.toggle('hidden',name!==page));
   $('#page-crumb').textContent=({dashboard:'Ringkasan',inventory:'Inventori',ledger:'Ledger stok',stocktakes:'Stok opname',suppliers:'Supplier', 'purchase-orders':'Purchase order','goods-receipts':'Penerimaan',menus:'Produk & BOM',cashiers:'Akun kasir',sales:'Penjualan',shifts:'Rekap shift'})[page];
-  document.querySelectorAll('.admin-nav [data-page]').forEach((link)=>link.classList.toggle('active',link.dataset.page===page));
+  document.querySelectorAll('.admin-nav [data-page]').forEach((link)=>{
+    const isCurrent=link.dataset.page===page;
+    link.classList.toggle('active',isCurrent);
+    if(isCurrent)link.setAttribute('aria-current','page');
+    else link.removeAttribute('aria-current');
+  });
 }
 function localDate(date=new Date()){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;}
 function setDefaultDates(formId){const form=$(formId);if(!form)return;const today=localDate();form.elements.from.value=today;form.elements.to.value=today;}

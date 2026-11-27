@@ -1,0 +1,20 @@
+{
+  "0": "public/admin.js",
+  "1": "notFound",
+  "2": "app.js",
+  "3": "public/pos.js",
+  "4": "badRequest",
+  "5": "package.json",
+  "6": "restore-db.js",
+  "7": "ci.yml",
+  "8": "migrate.js",
+  "9": "kds-service.js",
+  "10": "routes/admin.js",
+  "11": "generate_reference_catalog_seed.py",
+  "12": "ui.js",
+  "13": "updates",
+  "14": "cashier-stock.js",
+  "15": "login.js",
+  "16": "test-create-draft-order.ps1",
+  "17": "test-login-catalog.ps1"
+}
