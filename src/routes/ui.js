@@ -5,10 +5,14 @@ const loginHtml = new URL('../../public/login.html', import.meta.url);
 const loginCss = new URL('../../public/login.css', import.meta.url);
 const loginJs = new URL('../../public/login.js', import.meta.url);
 const posCss = new URL('../../public/pos.css', import.meta.url);
-const posJs = new URL('../../public/pos.js', import.meta.url);
 const adminHtml = new URL('../../public/admin.html', import.meta.url);
 const adminCss = new URL('../../public/admin.css', import.meta.url);
-const adminJs = new URL('../../public/admin.js', import.meta.url);
+const uiScripts = new Map([
+  ...['01-core', '02-shifts', '03-catalog', '04-cart', '05-payment', '06-history', '07-events']
+    .map((name) => [`pos/${name}.js`, new URL(`../../public/js/pos/${name}.js`, import.meta.url)]),
+  ...['01-core', '02-dashboard-inventory', '03-menus', '04-stocktakes', '05-procurement', '06-reports', '07-app', '08-events', '09-stocktake-events', '10-procurement-events', '11-start']
+    .map((name) => [`admin/${name}.js`, new URL(`../../public/js/admin/${name}.js`, import.meta.url)])
+]);
 const cashierStockHtml = new URL('../../public/cashier-stock.html', import.meta.url);
 const cashierStockCss = new URL('../../public/cashier-stock.css', import.meta.url);
 const cashierStockJs = new URL('../../public/cashier-stock.js', import.meta.url);
@@ -72,19 +76,16 @@ export async function uiRoutes(app) {
     return reply.type('text/css; charset=utf-8').send(await readFile(adminCss));
   });
 
-  app.get('/admin.js', async (_request, reply) => {
-    reply.header('cache-control', 'no-store');
-    return reply.type('application/javascript; charset=utf-8').send(await readFile(adminJs));
-  });
-
   app.get('/pos.css', async (_request, reply) => {
     reply.header('cache-control', 'no-store');
     return reply.type('text/css; charset=utf-8').send(await readFile(posCss));
   });
 
-  app.get('/pos.js', async (_request, reply) => {
+  app.get('/js/:area/:asset', async (request, reply) => {
+    const script = uiScripts.get(`${request.params.area}/${request.params.asset}`);
+    if (!script) return reply.code(404).send({ error: 'Script tidak ditemukan.' });
     reply.header('cache-control', 'no-store');
-    return reply.type('application/javascript; charset=utf-8').send(await readFile(posJs));
+    return reply.type('application/javascript; charset=utf-8').send(await readFile(script));
   });
 
   app.get('/pos-assets/:asset', async (request, reply) => {

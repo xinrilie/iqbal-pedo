@@ -17,12 +17,6 @@
     "ast_hash": "78c587ed79d3a5f4bbc55feedaaaf6be",
     "semantic_hash": "78c587ed79d3a5f4bbc55feedaaaf6be"
   },
-  "public/admin.js": {
-    "mtime": 1795772861.3959098,
-    "seen": 1795772891.3649654,
-    "ast_hash": "012f9dbd53a9e44dbb75cad538488e03",
-    "semantic_hash": ""
-  },
   "public/cashier-stock.js": {
     "mtime": 1795698911.7763586,
     "seen": 1795741323.243544,
@@ -34,12 +28,6 @@
     "seen": 1795741323.243544,
     "ast_hash": "e89d7b0d6d46de7fbb0a65e1a4daa350",
     "semantic_hash": "e89d7b0d6d46de7fbb0a65e1a4daa350"
-  },
-  "public/pos.js": {
-    "mtime": 1795705433.3839505,
-    "seen": 1795741323.247418,
-    "ast_hash": "8e0667ac221e16799d265c64bf70a0e8",
-    "semantic_hash": "8e0667ac221e16799d265c64bf70a0e8"
   },
   "reference/openapi_sesi2.yaml": {
     "mtime": 1795586829.909681,
@@ -295,10 +283,10 @@
     "semantic_hash": "6859aca97034f963c959625c46ffff51"
   },
   "src/routes/ui.js": {
-    "mtime": 1795580751.415398,
-    "seen": 1795741323.270808,
-    "ast_hash": "1d28e5db460559fdc6e9730c97185e08",
-    "semantic_hash": "1d28e5db460559fdc6e9730c97185e08"
+    "mtime": 1795776132.99157,
+    "seen": 1795776142.0307019,
+    "ast_hash": "f065ae758566a220e10f60dbdb6dbc20",
+    "semantic_hash": ""
   },
   "src/server.js": {
     "mtime": 1794758260.6315117,
@@ -535,9 +523,9 @@
     "semantic_hash": ""
   },
   "public/admin.html": {
-    "mtime": 1795772861.1078918,
-    "seen": 1795772891.4191923,
-    "ast_hash": "243f6d89e6097e70c8d9e4e4a7cf9b0c",
+    "mtime": 1795776125.5741887,
+    "seen": 1795776142.0456586,
+    "ast_hash": "9ad61f64b32a8f3f67960f9541f9d2e5",
     "semantic_hash": ""
   },
   "public/cashier-stock.html": {
@@ -553,9 +541,9 @@
     "semantic_hash": ""
   },
   "public/pos.html": {
-    "mtime": 1795705428.4696872,
-    "seen": 1795772891.4191923,
-    "ast_hash": "111e40435c3eeba6971c2c1345e90f5f",
+    "mtime": 1795775973.2095122,
+    "seen": 1795776002.523702,
+    "ast_hash": "70e4858466989718272d401209e7bdc8",
     "semantic_hash": ""
   },
   "reference/README_sesi4.md": {
@@ -640,6 +628,120 @@
     "mtime": 1794763569.2684264,
     "seen": 1795772891.4191923,
     "ast_hash": "f708b6f11a43e61f56803a5c1f2d1bb8",
+    "semantic_hash": ""
+  },
+  "visual_check.py": {
+    "mtime": 1795773709.9588223,
+    "seen": 1795775621.214574,
+    "ast_hash": "277ba55bd62317be818d6c309313b7c8",
+    "semantic_hash": ""
+  },
+  "public/js/admin/01-core.js": {
+    "mtime": 1795775997.0904455,
+    "seen": 1795776002.486513,
+    "ast_hash": "9fa310f9ee6c4ec9ffe987148daa1275",
+    "semantic_hash": ""
+  },
+  "public/js/admin/02-dashboard-inventory.js": {
+    "mtime": 1795775997.0920582,
+    "seen": 1795776002.486513,
+    "ast_hash": "5bf34a0e79237aa70029c1d7b5edfa55",
+    "semantic_hash": ""
+  },
+  "public/js/admin/03-menus.js": {
+    "mtime": 1795775997.09384,
+    "seen": 1795776002.486513,
+    "ast_hash": "29808d485c7406b889f9f25ce43e48c2",
+    "semantic_hash": ""
+  },
+  "public/js/admin/04-stocktakes.js": {
+    "mtime": 1795775997.0973668,
+    "seen": 1795776002.486513,
+    "ast_hash": "81dfddc66e1b716dabd84b2554dfcf9f",
+    "semantic_hash": ""
+  },
+  "public/js/admin/05-procurement.js": {
+    "mtime": 1795775997.0978916,
+    "seen": 1795776002.486513,
+    "ast_hash": "2ce025edb6231ed85bea73cdbc95fc79",
+    "semantic_hash": ""
+  },
+  "public/js/admin/06-reports.js": {
+    "mtime": 1795775997.0978916,
+    "seen": 1795776002.486513,
+    "ast_hash": "2545c4ea5fbfa3dff841640b3de52e6d",
+    "semantic_hash": ""
+  },
+  "public/js/admin/07-app.js": {
+    "mtime": 1795775997.1051204,
+    "seen": 1795776002.486513,
+    "ast_hash": "cd6818c8c7dd2c986b89f5a91aa61755",
+    "semantic_hash": ""
+  },
+  "public/js/admin/08-events.js": {
+    "mtime": 1795776125.5390675,
+    "seen": 1795776142.0026827,
+    "ast_hash": "cf1a6f414e5eeddd8590a1727029ecb4",
+    "semantic_hash": ""
+  },
+  "public/js/pos/01-core.js": {
+    "mtime": 1795775997.0491092,
+    "seen": 1795776002.486513,
+    "ast_hash": "9847f3921640c547b9c59a78e267b685",
+    "semantic_hash": ""
+  },
+  "public/js/pos/02-shifts.js": {
+    "mtime": 1795775997.0571544,
+    "seen": 1795776002.486513,
+    "ast_hash": "bbe03f9e4d704ceb38fa2541e8c9e621",
+    "semantic_hash": ""
+  },
+  "public/js/pos/03-catalog.js": {
+    "mtime": 1795775997.0702655,
+    "seen": 1795776002.486513,
+    "ast_hash": "fa7237482303f241ac903b947e2f7cfe",
+    "semantic_hash": ""
+  },
+  "public/js/pos/04-cart.js": {
+    "mtime": 1795775997.0719573,
+    "seen": 1795776002.486513,
+    "ast_hash": "5eb02c9cc8b94934f79a56ddd662b9e2",
+    "semantic_hash": ""
+  },
+  "public/js/pos/05-payment.js": {
+    "mtime": 1795775997.0775113,
+    "seen": 1795776002.486513,
+    "ast_hash": "e4d615118ef3602ff51704107dd5c5c0",
+    "semantic_hash": ""
+  },
+  "public/js/pos/06-history.js": {
+    "mtime": 1795775997.0795214,
+    "seen": 1795776002.486513,
+    "ast_hash": "9960c1d9e282bac59af6b8df19a53a2b",
+    "semantic_hash": ""
+  },
+  "public/js/pos/07-events.js": {
+    "mtime": 1795775997.0835412,
+    "seen": 1795776002.486513,
+    "ast_hash": "6336703d2911be0f6ff2cff8a41f6995",
+    "semantic_hash": ""
+  },
+  "public/js/admin/09-stocktake-events.js": {
+    "mtime": 1795776125.5432627,
+    "seen": 1795776142.0026827,
+    "ast_hash": "53547a408b78b17df0fca480ec89d877",
+    "semantic_hash": ""
+  },
+  "public/js/admin/10-procurement-events.js": {
+    "mtime": 1795776125.5432627,
+    "seen": 1795776142.0026827,
+    "ast_hash": "6e82d82cab827964d96c5fae1fec629e",
+    "semantic_hash": ""
+  },
+  "public/js/admin/11-start.js": {
+    "mtime": 1795776125.5455225,
+    "seen": 1795776142.0026827,
+    "ast_hash": "e04ce4a2677e02a31077d2827bab5e87",
     "semantic_hash": ""
   },
   "package-lock.json": {
